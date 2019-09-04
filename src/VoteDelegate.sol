@@ -1,5 +1,5 @@
 // VoteDelegate - delegate your vote
-pragma solidity ^0.4.24;
+pragma solidity >=0.4.24;
 
 import "ds-token/token.sol";
 import "ds-chief/chief.sol";
@@ -18,8 +18,8 @@ contract VoteDelegate {
 
         gov = chief.GOV();
         iou = chief.IOU();
-        gov.approve(chief, uint256(-1));
-        iou.approve(chief, uint256(-1));
+        gov.approve(address(chief), uint256(-1));
+        iou.approve(address(chief), uint256(-1));
     }
 
     modifier auth() {
@@ -38,11 +38,11 @@ contract VoteDelegate {
     }
 
     function freeAll() public auth {
-        chief.free(chief.deposits(this));
-        gov.push(cold, gov.balanceOf(this));
+        chief.free(chief.deposits(address(this)));
+        gov.push(cold, gov.balanceOf(address(this)));
     }
 
-    function vote(address[] yays) public auth returns (bytes32) {
+    function vote(address[] memory yays) public auth returns (bytes32) {
         return chief.vote(yays);
     }
 

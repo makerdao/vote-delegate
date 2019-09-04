@@ -1,5 +1,5 @@
 // VoteDelegateFactory - create and keep record of proxy identities
-pragma solidity ^0.4.24;
+pragma solidity >=0.4.24;
 
 import "./VoteDelegate.sol";
 
@@ -15,7 +15,7 @@ contract VoteDelegateFactory {
     constructor(DSChief chief_) public { chief = chief_; }
 
     function hasProxy(address guy) public view returns (bool) {
-        return (coldMap[guy] != address(0) || hotMap[guy] != address(0));
+        return (address(coldMap[guy]) != address(0x0) || address(hotMap[guy]) != address(0x0));
     }
 
     function initiateLink(address hot) public {
@@ -34,17 +34,17 @@ contract VoteDelegateFactory {
         hotMap[msg.sender] = voteDelegate;
         coldMap[cold] = voteDelegate;
         delete linkRequests[cold];
-        emit LinkConfirmed(cold, msg.sender, voteDelegate);
+        emit LinkConfirmed(cold, msg.sender, address(voteDelegate));
     }
 
     function breakLink() public {
         require(hasProxy(msg.sender), "No VoteDelegate found for this sender");
 
-        VoteDelegate voteDelegate = coldMap[msg.sender] != address(0)
+        VoteDelegate voteDelegate = address(coldMap[msg.sender]) != address(0x0)
             ? coldMap[msg.sender] : hotMap[msg.sender];
         address cold = voteDelegate.cold();
         address hot = voteDelegate.hot();
-        require(chief.deposits(voteDelegate) == 0, "VoteDelegate still has funds attached to it");
+        require(chief.deposits(address(voteDelegate)) == 0, "VoteDelegate still has funds attached to it");
 
         delete coldMap[cold];
         delete hotMap[hot];

@@ -1,4 +1,4 @@
-pragma solidity ^0.4.24;
+pragma solidity >=0.4.24;
 
 import "ds-test/test.sol";
 import "./VoteDelegateFactory.sol";
@@ -28,8 +28,9 @@ contract VoteUser {
     }
 
     function tryBreakLink() public returns (bool) {
-        bytes4 sig = bytes4(keccak256("breakLink()"));
-        return address(voteDelegateFactory).call(sig);
+        bytes memory sig = abi.encodeWithSignature("breakLink()");
+        (bool ok, bytes memory ret) = address(voteDelegateFactory).call(sig); ret;
+        return ok;
     }
 
     function proxyApprove(address _proxy, DSToken _token) public {
@@ -68,46 +69,46 @@ contract VoteDelegateFactoryTest is DSTest {
     }
 
     function test_initiateLink() public {
-        assertEq(voteDelegateFactory.linkRequests(cold), address(0));
-        cold.doInitiateLink(hot);
-        assertEq(voteDelegateFactory.linkRequests(cold), hot);
+        assertEq(voteDelegateFactory.linkRequests(address(cold)), address(0));
+        cold.doInitiateLink(address(hot));
+        assertEq(voteDelegateFactory.linkRequests(address(cold)), address(hot));
     }
 
     function test_approveLink() public {
-        assertEq(voteDelegateFactory.coldMap(cold), address(0));
-        assertEq(voteDelegateFactory.hotMap(hot), address(0));
-        cold.doInitiateLink(hot);
-        hot.doApproveLink(cold);
-        assertEq(voteDelegateFactory.coldMap(cold), voteDelegateFactory.hotMap(hot));
-        assertEq(voteDelegateFactory.coldMap(cold).cold(), cold);
-        assertEq(voteDelegateFactory.hotMap(hot).hot(), hot);
+        assertEq(address(voteDelegateFactory.coldMap(address(cold))), address(0));
+        assertEq(address(voteDelegateFactory.hotMap(address(hot))), address(0));
+        cold.doInitiateLink(address(hot));
+        hot.doApproveLink(address(cold));
+        assertEq(address(voteDelegateFactory.coldMap(address(cold))), address(voteDelegateFactory.hotMap(address(hot))));
+        assertEq(address(voteDelegateFactory.coldMap(address(cold)).cold()), address(cold));
+        assertEq(address(voteDelegateFactory.hotMap(address(hot)).hot()), address(hot));
     }
 
     function test_coldBreakLink() public {
-        cold.doInitiateLink(hot);
-        hot.doApproveLink(cold);
-        assertTrue(voteDelegateFactory.coldMap(cold) != address(0));
-        assertTrue(voteDelegateFactory.hotMap(hot) != address(0));
+        cold.doInitiateLink(address(hot));
+        hot.doApproveLink(address(cold));
+        assertTrue(address(voteDelegateFactory.coldMap(address(cold))) != address(0));
+        assertTrue(address(voteDelegateFactory.hotMap(address(hot))) != address(0));
         cold.doBreakLink();
-        assertEq(voteDelegateFactory.coldMap(cold), address(0));
-        assertEq(voteDelegateFactory.hotMap(hot), address(0));
+        assertEq(address(voteDelegateFactory.coldMap(address(cold))), address(0));
+        assertEq(address(voteDelegateFactory.hotMap(address(hot))), address(0));
     }
 
     function test_hotBreakLink() public {
-        cold.doInitiateLink(hot);
-        hot.doApproveLink(cold);
-        assertTrue(voteDelegateFactory.coldMap(cold) != address(0));
-        assertTrue(voteDelegateFactory.hotMap(hot) != address(0));
+        cold.doInitiateLink(address(hot));
+        hot.doApproveLink(address(cold));
+        assertTrue(address(voteDelegateFactory.coldMap(address(cold))) != address(0));
+        assertTrue(address(voteDelegateFactory.hotMap(address(hot))) != address(0));
         hot.doBreakLink();
-        assertEq(voteDelegateFactory.coldMap(cold), address(0));
-        assertEq(voteDelegateFactory.hotMap(hot), address(0));
+        assertEq(address(voteDelegateFactory.coldMap(address(cold))), address(0));
+        assertEq(address(voteDelegateFactory.hotMap(address(hot))), address(0));
     }
 
     function test_tryBreakLink() public {
-        cold.doInitiateLink(hot);
-        VoteDelegate voteDelegate = hot.doApproveLink(cold);
-        chief.GOV().mint(cold, 1);
-        cold.proxyApprove(voteDelegate, chief.GOV());
+        cold.doInitiateLink(address(hot));
+        VoteDelegate voteDelegate = hot.doApproveLink(address(cold));
+        chief.GOV().mint(address(cold), 1);
+        cold.proxyApprove(address(voteDelegate), chief.GOV());
         cold.proxyLock(voteDelegate, 1);
         assertTrue(!cold.tryBreakLink());
 
@@ -116,18 +117,18 @@ contract VoteDelegateFactoryTest is DSTest {
     }
 
     function test_linkSelf() public { // misnomer, transfer uneccessary
-        assertEq(voteDelegateFactory.coldMap(cold), address(0));
+        assertEq(address(voteDelegateFactory.coldMap(address(cold))), address(0));
         VoteDelegate voteDelegate = cold.doLinkSelf();
-        assertEq(voteDelegateFactory.coldMap(cold), voteDelegate);
-        assertEq(voteDelegateFactory.coldMap(cold).cold(), cold);
-        assertEq(voteDelegateFactory.hotMap(cold).hot(), cold);
+        assertEq(address(voteDelegateFactory.coldMap(address(cold))), address(voteDelegate));
+        assertEq(address(voteDelegateFactory.coldMap(address(cold)).cold()), address(cold));
+        assertEq(address(voteDelegateFactory.hotMap(address(cold)).hot()), address(cold));
     }
 
     function testFail_linkSelf() public { // misnomer, transfer uneccessary
-        assertEq(voteDelegateFactory.coldMap(cold), address(0));
-        cold.doInitiateLink(hot);
-        hot.doApproveLink(cold);
-        assertEq(voteDelegateFactory.coldMap(cold), hot);
+        assertEq(address(voteDelegateFactory.coldMap(address(cold))), address(0));
+        cold.doInitiateLink(address(hot));
+        hot.doApproveLink(address(cold));
+        assertEq(address(voteDelegateFactory.coldMap(address(cold))), address(hot));
         cold.doLinkSelf();
     }
 }
