@@ -1,52 +1,77 @@
 // VoteDelegate - delegate your vote
-pragma solidity >=0.4.24;
+pragma solidity 0.5.11;
 
+import "ds-math/math.sol";
 import "ds-token/token.sol";
 import "ds-chief/chief.sol";
 
-contract VoteDelegate {
-    address public cold;
-    address public hot;
+contract VoteDelegate is DSMath {
+    bool public abandoned;
+    mapping(address => uint256) public delegators;
+    address public delegate;
+    address public factory;
     DSToken public gov;
     DSToken public iou;
     DSChief public chief;
 
-    constructor(DSChief _chief, address _cold, address _hot) public {
+    //TODO(godsflaw): test me
+    constructor(DSChief _chief, address _delegate, address _factory) public {
         chief = _chief;
-        cold = _cold;
-        hot = _hot;
+        delegate = _delegate;
+        factory = _factory;
+        abandoned = false;
 
         gov = chief.GOV();
         iou = chief.IOU();
+
         gov.approve(address(chief), uint256(-1));
         iou.approve(address(chief), uint256(-1));
     }
 
-    modifier auth() {
-        require(msg.sender == hot || msg.sender == cold, "Sender must be a Cold or Hot Wallet");
+    //TODO(godsflaw): test me
+    modifier delegate_auth() {
+        require(msg.sender == delegate, "Sender must be delegate");
         _;
     }
 
-    function lock(uint256 wad) public auth {
-        gov.pull(cold, wad);   // mkr from cold
-        chief.lock(wad);       // mkr out, ious in
+    //TODO(godsflaw): test me
+    modifier delegator_auth() {
+        require(delegators[msg.sender] > 0, "Sender must be a delegator");
+        _;
     }
 
-    function free(uint256 wad) public auth {
-        chief.free(wad);       // ious out, mkr in
-        gov.push(cold, wad);   // mkr to cold
+    //TODO(godsflaw): test me
+    modifier factory_auth() {
+        require(msg.sender == factory, "Sender must be VoteDelegateFactory");
+        _;
     }
 
-    function freeAll() public auth {
-        chief.free(chief.deposits(address(this)));
-        gov.push(cold, gov.balanceOf(address(this)));
+    //TODO(godsflaw): test me
+    function abandon() public factory_auth {
+        abandoned = true;
     }
 
-    function vote(address[] memory yays) public auth returns (bytes32) {
+    //TODO(godsflaw): test me
+    function lock(uint256 wad) public {
+        delegators[msg.sender] = add(delegators[msg.sender], wad);
+        gov.pull(msg.sender, wad);
+        chief.lock(wad);
+    }
+
+    //TODO(godsflaw): test me
+    function free(uint256 wad) public delegator_auth {
+        delegators[msg.sender] = sub(delegators[msg.sender], wad);
+        chief.free(wad);
+        gov.push(msg.sender, wad);
+    }
+
+    //TODO(godsflaw): test me
+    function vote(address[] memory yays) public delegate_auth returns (bytes32) {
         return chief.vote(yays);
     }
 
-    function vote(bytes32 slate) public auth {
+    //TODO(godsflaw): test me
+    function vote(bytes32 slate) public delegate_auth {
         chief.vote(slate);
     }
 }

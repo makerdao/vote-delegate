@@ -1,57 +1,47 @@
-// VoteDelegateFactory - create and keep record of proxy identities
-pragma solidity >=0.4.24;
+// VoteDelegateFactory - create and keep record of delegats
+pragma solidity 0.5.11;
 
 import "./VoteDelegate.sol";
 
 contract VoteDelegateFactory {
     DSChief public chief;
-    mapping(address => VoteDelegate) public hotMap;
-    mapping(address => VoteDelegate) public coldMap;
-    mapping(address => address) public linkRequests;
+    mapping(address => VoteDelegate) public delegates;
 
-    event LinkRequested(address indexed cold, address indexed hot);
-    event LinkConfirmed(address indexed cold, address indexed hot, address indexed voteDelegate);
+    event VoteDelegateCreated(
+        address indexed delegate,
+        address indexed voteDelegate
+    );
 
-    constructor(DSChief chief_) public { chief = chief_; }
+    event VoteDelegateDestroyed(
+        address indexed delegate,
+        address indexed voteDelegate
+    );
 
-    function hasProxy(address guy) public view returns (bool) {
-        return (address(coldMap[guy]) != address(0x0) || address(hotMap[guy]) != address(0x0));
+    constructor(DSChief chief_) public {
+        chief = chief_;
     }
 
-    function initiateLink(address hot) public {
-        require(!hasProxy(msg.sender), "Cold wallet is already linked to another Vote Proxy");
-        require(!hasProxy(hot), "Hot wallet is already linked to another Vote Proxy");
-
-        linkRequests[msg.sender] = hot;
-        emit LinkRequested(msg.sender, hot);
+    //TODO(godsflaw): test me
+    function isDelegate(address guy) public view returns (bool) {
+        return (address(delegates[guy]) != address(0x0));
     }
 
-    function approveLink(address cold) public returns (VoteDelegate voteDelegate) {
-        require(linkRequests[cold] == msg.sender, "Cold wallet must initiate a link first");
-        require(!hasProxy(msg.sender), "Hot wallet is already linked to another Vote Proxy");
+    //TODO(godsflaw): test me
+    function create() public returns (VoteDelegate voteDelegate) {
+        require(!isDelegate(msg.sender), "this address is already a delegate");
 
-        voteDelegate = new VoteDelegate(chief, cold, msg.sender);
-        hotMap[msg.sender] = voteDelegate;
-        coldMap[cold] = voteDelegate;
-        delete linkRequests[cold];
-        emit LinkConfirmed(cold, msg.sender, address(voteDelegate));
+        voteDelegate = new VoteDelegate(chief, msg.sender, address(this));
+        delegates[msg.sender] = voteDelegate;
+        emit VoteDelegateCreated(msg.sender, address(voteDelegate));
     }
 
-    function breakLink() public {
-        require(hasProxy(msg.sender), "No VoteDelegate found for this sender");
+    //TODO(godsflaw): test me
+    function destroy() public {
+        require(isDelegate(msg.sender), "No VoteDelegate found");
 
-        VoteDelegate voteDelegate = address(coldMap[msg.sender]) != address(0x0)
-            ? coldMap[msg.sender] : hotMap[msg.sender];
-        address cold = voteDelegate.cold();
-        address hot = voteDelegate.hot();
-        require(chief.deposits(address(voteDelegate)) == 0, "VoteDelegate still has funds attached to it");
-
-        delete coldMap[cold];
-        delete hotMap[hot];
-    }
-
-    function linkSelf() public returns (VoteDelegate voteDelegate) {
-        initiateLink(msg.sender);
-        return approveLink(msg.sender);
+        VoteDelegate voteDelegate = delegates[msg.sender];
+        voteDelegate.abandon();
+        delete delegates[msg.sender];
+        emit VoteDelegateDestroyed(msg.sender, address(voteDelegate));
     }
 }
