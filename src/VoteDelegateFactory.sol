@@ -21,12 +21,10 @@ contract VoteDelegateFactory {
         chief = chief_;
     }
 
-    //TODO(godsflaw): test me
     function isDelegate(address guy) public view returns (bool) {
         return (address(delegates[guy]) != address(0x0));
     }
 
-    //TODO(godsflaw): test me
     function create() public returns (VoteDelegate voteDelegate) {
         require(!isDelegate(msg.sender), "this address is already a delegate");
 
@@ -35,7 +33,6 @@ contract VoteDelegateFactory {
         emit VoteDelegateCreated(msg.sender, address(voteDelegate));
     }
 
-    //TODO(godsflaw): test me
     function destroy() public {
         require(isDelegate(msg.sender), "No VoteDelegate found");
 
