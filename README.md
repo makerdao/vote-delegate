@@ -2,7 +2,7 @@
 
 ```
 dapp update
-dapp build
+dapp build --extract
 dapp test
 dapp create VoteDelegate
 ```
