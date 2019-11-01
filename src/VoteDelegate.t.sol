@@ -92,9 +92,9 @@ contract VoteDelegateTest is DSTest {
 
         proxy = new VoteDelegate(chief, address(cold), address(hot));
 
-        random.setProxy(proxy);
-        cold.setProxy(proxy);
-        hot.setProxy(proxy);
+        // random.setProxy(proxy);
+        // cold.setProxy(proxy);
+        // hot.setProxy(proxy);
     }
 
     // sainity test -> cold can lock and free gov tokens with chief directly
