@@ -59,11 +59,6 @@ contract VoteDelegate {
         ChiefLike(_chief).IOU().approve(_chief, uint256(-1));
     }
 
-    modifier live() {
-        require(block.timestamp < expiration, "Delegation contract expired");
-        _;
-    }
-
     function add(uint256 x, uint256 y) internal pure returns (uint256 z) {
         require((z = x + y) >= x, "ds-math-add-overflow");
     }
@@ -73,6 +68,11 @@ contract VoteDelegate {
 
     modifier delegate_auth() {
         require(msg.sender == delegate, "Sender must be delegate");
+        _;
+    }
+
+    modifier live() {
+        require(block.timestamp < expiration, "Delegation contract expired");
         _;
     }
 
