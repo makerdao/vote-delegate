@@ -1,77 +1,75 @@
 // VoteDelegate - delegate your vote
-pragma solidity 0.5.11;
+pragma solidity 0.6.12;
 
-import "ds-math/math.sol";
-import "ds-token/token.sol";
-import "ds-chief/chief.sol";
+interface TokenLike {
+    function balanceOf(address) external view returns (uint256);
+    function approve(address, uint256) external;
+    function pull(address, uint256) external;
+    function push(address, uint256) external;
+    function transfer(address, uint256) external;
+    function mint(address, uint256) external;
+}
 
-contract VoteDelegate is DSMath {
-    bool public abandoned;
+interface ChiefLike {
+    function GOV() external view returns (TokenLike);
+    function IOU() external view returns (TokenLike);
+    function approvals(address) external view returns (uint256);
+    function deposits(address) external view returns (uint256);
+    function lock(uint256) external;
+    function free(uint256) external;
+    function vote(address[] calldata) external returns (bytes32);
+    function vote(bytes32) external;
+}
+
+contract VoteDelegate {
     mapping(address => uint256) public delegators;
-    address public delegate;
-    address public factory;
-    DSToken public gov;
-    DSToken public iou;
-    DSChief public chief;
+    address public immutable delegate;
+    TokenLike public immutable gov;
+    TokenLike public immutable iou;
+    ChiefLike public immutable chief;
 
-    //TODO(godsflaw): test me
-    constructor(DSChief _chief, address _delegate, address _factory) public {
-        chief = _chief;
+    constructor(address _chief, address _delegate) public {
+        chief = ChiefLike(_chief);
         delegate = _delegate;
-        factory = _factory;
-        abandoned = false;
 
-        gov = chief.GOV();
-        iou = chief.IOU();
+        gov = ChiefLike(_chief).GOV();
+        iou = ChiefLike(_chief).IOU();
 
-        gov.approve(address(chief), uint256(-1));
-        iou.approve(address(chief), uint256(-1));
+        ChiefLike(_chief).GOV().approve(_chief, uint256(-1));
+        ChiefLike(_chief).IOU().approve(_chief, uint256(-1));
     }
 
-    //TODO(godsflaw): test me
+    function add(uint256 x, uint256 y) internal pure returns (uint256 z) {
+        require((z = x + y) >= x, "ds-math-add-overflow");
+    }
+    function sub(uint256 x, uint256 y) internal pure returns (uint256 z) {
+        require((z = x - y) <= x, "ds-math-sub-underflow");
+    }
+
     modifier delegate_auth() {
         require(msg.sender == delegate, "Sender must be delegate");
         _;
     }
 
-    //TODO(godsflaw): test me
-    modifier delegator_auth() {
-        require(delegators[msg.sender] > 0, "Sender must be a delegator");
-        _;
-    }
-
-    //TODO(godsflaw): test me
-    modifier factory_auth() {
-        require(msg.sender == factory, "Sender must be VoteDelegateFactory");
-        _;
-    }
-
-    //TODO(godsflaw): test me
-    function abandon() public factory_auth {
-        abandoned = true;
-    }
-
-    //TODO(godsflaw): test me
-    function lock(uint256 wad) public {
+    function lock(uint256 wad) external {
         delegators[msg.sender] = add(delegators[msg.sender], wad);
         gov.pull(msg.sender, wad);
         chief.lock(wad);
+        iou.push(msg.sender, wad);
     }
 
-    //TODO(godsflaw): test me
-    function free(uint256 wad) public delegator_auth {
+    function free(uint256 wad) external {
         delegators[msg.sender] = sub(delegators[msg.sender], wad);
+        iou.pull(msg.sender, wad);
         chief.free(wad);
         gov.push(msg.sender, wad);
     }
 
-    //TODO(godsflaw): test me
-    function vote(address[] memory yays) public delegate_auth returns (bytes32) {
+    function vote(address[] memory yays) external delegate_auth returns (bytes32) {
         return chief.vote(yays);
     }
 
-    //TODO(godsflaw): test me
-    function vote(bytes32 slate) public delegate_auth {
+    function vote(bytes32 slate) external delegate_auth {
         chief.vote(slate);
     }
 }
