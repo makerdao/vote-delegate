@@ -41,19 +41,27 @@ interface ChiefLike {
 contract VoteDelegate {
     mapping(address => uint256) public delegators;
     address public immutable delegate;
+    uint256   public immutable expiration;
     TokenLike public immutable gov;
     TokenLike public immutable iou;
     ChiefLike public immutable chief;
 
-    constructor(address _chief, address _delegate) public {
+    constructor(address _chief, address _delegate, uint256 _expiration) public {
+        require(_expiration > block.timestamp && _expiration < block.timestamp + 20 * 365 days, "invalid expiration");
         chief = ChiefLike(_chief);
         delegate = _delegate;
+        expiration = _expiration;
 
         gov = ChiefLike(_chief).GOV();
         iou = ChiefLike(_chief).IOU();
 
         ChiefLike(_chief).GOV().approve(_chief, uint256(-1));
         ChiefLike(_chief).IOU().approve(_chief, uint256(-1));
+    }
+
+    modifier live() {
+        require(block.timestamp < expiration, "Delegation contract expired");
+        _;
     }
 
     function add(uint256 x, uint256 y) internal pure returns (uint256 z) {
@@ -68,7 +76,7 @@ contract VoteDelegate {
         _;
     }
 
-    function lock(uint256 wad) external {
+    function lock(uint256 wad) external live {
         delegators[msg.sender] = add(delegators[msg.sender], wad);
         gov.pull(msg.sender, wad);
         chief.lock(wad);
@@ -82,11 +90,11 @@ contract VoteDelegate {
         gov.push(msg.sender, wad);
     }
 
-    function vote(address[] memory yays) external delegate_auth returns (bytes32) {
+    function vote(address[] memory yays) external delegate_auth live returns (bytes32) {
         return chief.vote(yays);
     }
 
-    function vote(bytes32 slate) external delegate_auth {
+    function vote(bytes32 slate) external delegate_auth live {
         chief.vote(slate);
     }
 }

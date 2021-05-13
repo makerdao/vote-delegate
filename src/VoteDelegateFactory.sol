@@ -44,7 +44,7 @@ contract VoteDelegateFactory {
     function create() external returns (VoteDelegate voteDelegate) {
         require(!isDelegate(msg.sender), "this address is already a delegate");
 
-        voteDelegate = new VoteDelegate(address(chief), msg.sender);
+        voteDelegate = new VoteDelegate(address(chief), msg.sender, block.timestamp + 365 days);
         delegates[msg.sender] = voteDelegate;
         emit VoteDelegateCreated(msg.sender, address(voteDelegate));
     }
