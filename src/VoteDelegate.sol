@@ -40,7 +40,7 @@ interface ChiefLike {
 
 contract VoteDelegate {
     mapping(address => uint256) public delegators;
-    address public immutable delegate;
+    address   public immutable delegate;
     uint256   public immutable expiration;
     TokenLike public immutable gov;
     TokenLike public immutable iou;
