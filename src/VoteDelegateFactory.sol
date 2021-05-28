@@ -42,7 +42,7 @@ contract VoteDelegateFactory {
     }
 
     function create() external returns (VoteDelegate voteDelegate) {
-        require(!isDelegate(msg.sender), "this address is already a delegate");
+        require(!isDelegate(msg.sender), "VoteDelegateFactory/sender-is-already-delegate");
 
         voteDelegate = new VoteDelegate(address(chief), msg.sender);
         delegates[msg.sender] = voteDelegate;
@@ -50,7 +50,7 @@ contract VoteDelegateFactory {
     }
 
     function destroy() external {
-        require(isDelegate(msg.sender), "No VoteDelegate found");
+        require(isDelegate(msg.sender), "VoteDelegateFactory/sender-is-not-delegate");
 
         address voteDelegate = address(delegates[msg.sender]);
         delete delegates[msg.sender];

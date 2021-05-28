@@ -57,14 +57,14 @@ contract VoteDelegate {
     }
 
     function add(uint256 x, uint256 y) internal pure returns (uint256 z) {
-        require((z = x + y) >= x, "ds-math-add-overflow");
+        require((z = x + y) >= x, "VoteDelegate/add-overflow");
     }
     function sub(uint256 x, uint256 y) internal pure returns (uint256 z) {
-        require((z = x - y) <= x, "ds-math-sub-underflow");
+        require((z = x - y) <= x, "VoteDelegate/sub-underflow");
     }
 
     modifier delegate_auth() {
-        require(msg.sender == delegate, "Sender must be delegate");
+        require(msg.sender == delegate, "VoteDelegate/sender-not-delegate");
         _;
     }
 
