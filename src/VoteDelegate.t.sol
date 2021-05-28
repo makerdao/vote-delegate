@@ -154,7 +154,7 @@ contract VoteDelegateTest is DSTest {
         assertEq(iou.balanceOf(address(delegate)), 100 ether);
         assertEq(proxy.stake(address(delegate)), 100 ether);
 
-        // Flash loan protection
+        // Comply with Chief's flash loan protection
         hevm.roll(block.number + 1);
 
         delegate.doProxyFree(100 ether);
@@ -176,6 +176,7 @@ contract VoteDelegateTest is DSTest {
         assertEq(iou.balanceOf(address(delegator1)), 10_000 ether);
         assertEq(proxy.stake(address(delegator1)), 10_000 ether);
 
+        // Comply with Chief's flash loan protection
         hevm.roll(block.number + 1);
 
         delegator1.doProxyFree(10_000 ether);
