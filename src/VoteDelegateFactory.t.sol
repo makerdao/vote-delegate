@@ -35,7 +35,7 @@ contract VoteUser {
     }
 
     function doCreate() public returns (VoteDelegate) {
-        return voteDelegateFactory.create();
+        return VoteDelegate(voteDelegateFactory.create());
     }
 
     function doDestroy() public {
