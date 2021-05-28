@@ -39,7 +39,7 @@ interface ChiefLike {
 }
 
 contract VoteDelegate {
-    mapping(address => uint256) public delegators;
+    mapping(address => uint256) public stake;
     address public immutable delegate;
     TokenLike public immutable gov;
     TokenLike public immutable iou;
@@ -69,14 +69,14 @@ contract VoteDelegate {
     }
 
     function lock(uint256 wad) external {
-        delegators[msg.sender] = add(delegators[msg.sender], wad);
+        stake[msg.sender] = add(stake[msg.sender], wad);
         gov.pull(msg.sender, wad);
         chief.lock(wad);
         iou.push(msg.sender, wad);
     }
 
     function free(uint256 wad) external {
-        delegators[msg.sender] = sub(delegators[msg.sender], wad);
+        stake[msg.sender] = sub(stake[msg.sender], wad);
         iou.pull(msg.sender, wad);
         chief.free(wad);
         gov.push(msg.sender, wad);

@@ -80,7 +80,7 @@ contract Voter {
     }
 
     function doProxyFreeAll() public {
-        proxy.free(proxy.delegators(address(this)));
+        proxy.free(proxy.stake(address(this)));
     }
 
     function doProxyVote(address[] memory yays) public returns (bytes32 slate) {
@@ -151,7 +151,7 @@ contract VoteDelegateTest is DSTest {
         assertEq(gov.balanceOf(address(delegate)), 0);
         assertEq(gov.balanceOf(address(chief)), currMKR + 100 ether);
         assertEq(iou.balanceOf(address(delegate)), 100 ether);
-        assertEq(proxy.delegators(address(delegate)), 100 ether);
+        assertEq(proxy.stake(address(delegate)), 100 ether);
 
         // Flash loan protection
         hevm.roll(block.number + 1);
@@ -160,7 +160,7 @@ contract VoteDelegateTest is DSTest {
         assertEq(gov.balanceOf(address(delegate)), 100 ether);
         assertEq(gov.balanceOf(address(chief)), currMKR);
         assertEq(iou.balanceOf(address(delegate)), 0);
-        assertEq(proxy.delegators(address(delegate)), 0);
+        assertEq(proxy.stake(address(delegate)), 0);
    }
 
    function test_delegator_lock_free() public {
@@ -173,7 +173,7 @@ contract VoteDelegateTest is DSTest {
         assertEq(gov.balanceOf(address(delegator1)), 0);
         assertEq(gov.balanceOf(address(chief)), currMKR + 10_000 ether);
         assertEq(iou.balanceOf(address(delegator1)), 10_000 ether);
-        assertEq(proxy.delegators(address(delegator1)), 10_000 ether);
+        assertEq(proxy.stake(address(delegator1)), 10_000 ether);
 
         hevm.roll(block.number + 1);
 
@@ -181,7 +181,7 @@ contract VoteDelegateTest is DSTest {
         assertEq(gov.balanceOf(address(delegator1)), 10_000 ether);
         assertEq(gov.balanceOf(address(chief)), currMKR);
         assertEq(iou.balanceOf(address(delegator1)), 0);
-        assertEq(proxy.delegators(address(delegator1)), 0);
+        assertEq(proxy.stake(address(delegator1)), 0);
    }
 
    function test_delegate_voting() public {
