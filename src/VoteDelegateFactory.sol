@@ -21,7 +21,7 @@ pragma solidity 0.6.12;
 import "./VoteDelegate.sol";
 
 contract VoteDelegateFactory {
-    ChiefLike public immutable chief;
+    address public immutable chief;
     mapping(address => VoteDelegate) public delegates;
 
     event VoteDelegateCreated(
@@ -35,7 +35,7 @@ contract VoteDelegateFactory {
     );
 
     constructor(address chief_) public {
-        chief = ChiefLike(chief_);
+        chief = chief_;
     }
 
     function isDelegate(address guy) public view returns (bool) {
@@ -45,7 +45,7 @@ contract VoteDelegateFactory {
     function create() external returns (VoteDelegate voteDelegate) {
         require(!isDelegate(msg.sender), "VoteDelegateFactory/sender-is-already-delegate");
 
-        voteDelegate = new VoteDelegate(address(chief), msg.sender);
+        voteDelegate = new VoteDelegate(chief, msg.sender);
         delegates[msg.sender] = voteDelegate;
         emit VoteDelegateCreated(msg.sender, address(voteDelegate));
     }
