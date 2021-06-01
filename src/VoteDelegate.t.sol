@@ -91,6 +91,20 @@ contract Voter {
     function doProxyVote(bytes32 slate) public {
         proxy.vote(slate);
     }
+
+    function doAllow(address revoker) public {
+        proxy.allow(revoker);
+    }
+
+    function doForbid(address revoker) public {
+        proxy.forbid(revoker);
+    }
+}
+
+contract Revoker {
+    function revoke(VoteDelegate vod, address usr) external {
+        vod.revoke(usr);
+    }
 }
 
 contract VoteDelegateTest is DSTest {
@@ -252,5 +266,56 @@ contract VoteDelegateTest is DSTest {
         address[] memory yays = new address[](1);
         yays[0] = c1;
         delegator2.doProxyVote(yays);
+   }
+
+   // This function is used in both test_revoke and testFail_revoke_forbid; this helps to
+   // ensure that if both tests pass, the reversion in testFail_revoke_forbid is occurring
+   // on the correct line.
+   function revoke_setup() internal returns (Revoker revoker, uint256 initMKR) {
+        initMKR = gov.balanceOf(address(chief));
+
+        delegate.approveGov(address(proxy));
+        delegate.approveIou(address(proxy));
+        delegator1.approveGov(address(proxy));
+        delegator1.approveIou(address(proxy));
+        delegator1.doProxyLock(10_000 ether);
+        assertEq(proxy.stake(address(delegator1)),   10_000 ether          );
+        assertEq(gov.balanceOf(address(delegator1)), 0                     );
+        assertEq(iou.balanceOf(address(delegator1)), 10_000 ether          );
+        assertEq(gov.balanceOf(address(chief)),      initMKR + 10_000 ether);
+
+        revoker = new Revoker();
+        assertEq(proxy.allowed(address(delegator1), address(revoker)), 0);
+        delegator1.doAllow(address(revoker));
+        assertEq(proxy.allowed(address(delegator1), address(revoker)), 1);
+
+        // Comply with Chief's flash loan protection
+        hevm.roll(block.number + 1);
+   }
+
+   function test_revoke() public {
+        (Revoker revoker, uint256 initMKR) = revoke_setup();
+        revoker.revoke(proxy, address(delegator1));
+
+        assertEq(proxy.stake(address(delegator1)),   0           );
+        assertEq(gov.balanceOf(address(delegator1)), 10_000 ether);
+        assertEq(iou.balanceOf(address(delegator1)), 0           );
+        assertEq(gov.balanceOf(address(chief)),      initMKR     );
+
+        // allowance remains
+        assertEq(proxy.allowed(address(delegator1), address(revoker)), 1);
+   }
+
+   function testFail_revoke_forbid() public {
+        (Revoker revoker, ) = revoke_setup();
+        delegator1.doForbid(address(revoker));
+        revoker.revoke(proxy, address(delegator1));
+   }
+
+   function testFail_revoke_not_allowed() public {
+        (Revoker revoker, ) = revoke_setup();
+        Revoker otherRevoker = new Revoker();
+        assertTrue(address(otherRevoker) == address(revoker));
+        otherRevoker.revoke(proxy, address(delegator1));
    }
 }

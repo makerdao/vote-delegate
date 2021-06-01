@@ -40,6 +40,7 @@ interface ChiefLike {
 
 contract VoteDelegate {
     mapping(address => uint256) public stake;
+    mapping(address => mapping(address => uint256)) public allowed;
     address   public immutable delegate;
     TokenLike public immutable gov;
     TokenLike public immutable iou;
@@ -88,5 +89,21 @@ contract VoteDelegate {
 
     function vote(bytes32 slate) external delegate_auth {
         chief.vote(slate);
+    }
+
+    // --- opt-in revocation to insure against lost keys, etc ---
+    function allow(address revoker) external {
+        allowed[msg.sender][revoker] = 1;
+    }
+    function forbid(address revoker) external {
+        allowed[msg.sender][revoker] = 0;
+    }
+    function revoke(address delegator) external {
+        require(allowed[delegator][msg.sender] == 1, "VoteDelegate/not-allowed-to-revoke");
+        uint256 wad = stake[delegator];
+        stake[delegator] = 0;
+        iou.pull(delegator, wad);
+        chief.free(wad);
+        gov.push(delegator, wad);
     }
 }
