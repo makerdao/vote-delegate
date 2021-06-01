@@ -186,6 +186,31 @@ contract VoteDelegateTest is DSTest {
         assertEq(proxy.stake(address(delegator1)), 0);
    }
 
+   function test_delegator_lock_free_fuzz(uint256 wad_seed) public {
+        uint256 wad = 1 ether + wad_seed % 20_000 ether;
+        uint256 currMKR = gov.balanceOf(address(chief));
+
+        delegator2.approveGov(address(proxy));
+        delegator2.approveIou(address(proxy));
+
+        uint256 delGovBalance = gov.balanceOf(address(delegator2));
+
+        delegator2.doProxyLock(wad);
+        assertEq(gov.balanceOf(address(delegator2)), delGovBalance - wad);
+        assertEq(gov.balanceOf(address(chief)), currMKR + wad);
+        assertEq(iou.balanceOf(address(delegator2)), wad);
+        assertEq(proxy.stake(address(delegator2)), wad);
+
+        // Comply with Chief's flash loan protection
+        hevm.roll(block.number + 1);
+
+        delegator2.doProxyFree(wad);
+        assertEq(gov.balanceOf(address(delegator2)), delGovBalance);
+        assertEq(gov.balanceOf(address(chief)), currMKR);
+        assertEq(iou.balanceOf(address(delegator2)), 0);
+        assertEq(proxy.stake(address(delegator2)), 0);
+   }
+
    function test_delegate_voting() public {
         uint256 currMKR = gov.balanceOf(address(chief));
 
