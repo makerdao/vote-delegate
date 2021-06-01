@@ -2,7 +2,8 @@
 
 // Copyright (C) 2021 Dai Foundation
 
-// This program is free software: you can redistribute it and/or modify             // it under the terms of the GNU Affero General Public License as published by
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
@@ -80,7 +81,7 @@ contract Voter {
     }
 
     function doProxyFreeAll() public {
-        proxy.free(proxy.delegators(address(this)));
+        proxy.free(proxy.stake(address(this)));
     }
 
     function doProxyVote(address[] memory yays) public returns (bytes32 slate) {
@@ -151,16 +152,16 @@ contract VoteDelegateTest is DSTest {
         assertEq(gov.balanceOf(address(delegate)), 0);
         assertEq(gov.balanceOf(address(chief)), currMKR + 100 ether);
         assertEq(iou.balanceOf(address(delegate)), 100 ether);
-        assertEq(proxy.delegators(address(delegate)), 100 ether);
+        assertEq(proxy.stake(address(delegate)), 100 ether);
 
-        // Flash loan protection
+        // Comply with Chief's flash loan protection
         hevm.roll(block.number + 1);
 
         delegate.doProxyFree(100 ether);
         assertEq(gov.balanceOf(address(delegate)), 100 ether);
         assertEq(gov.balanceOf(address(chief)), currMKR);
         assertEq(iou.balanceOf(address(delegate)), 0);
-        assertEq(proxy.delegators(address(delegate)), 0);
+        assertEq(proxy.stake(address(delegate)), 0);
    }
 
    function test_delegator_lock_free() public {
@@ -173,15 +174,16 @@ contract VoteDelegateTest is DSTest {
         assertEq(gov.balanceOf(address(delegator1)), 0);
         assertEq(gov.balanceOf(address(chief)), currMKR + 10_000 ether);
         assertEq(iou.balanceOf(address(delegator1)), 10_000 ether);
-        assertEq(proxy.delegators(address(delegator1)), 10_000 ether);
+        assertEq(proxy.stake(address(delegator1)), 10_000 ether);
 
+        // Comply with Chief's flash loan protection
         hevm.roll(block.number + 1);
 
         delegator1.doProxyFree(10_000 ether);
         assertEq(gov.balanceOf(address(delegator1)), 10_000 ether);
         assertEq(gov.balanceOf(address(chief)), currMKR);
         assertEq(iou.balanceOf(address(delegator1)), 0);
-        assertEq(proxy.delegators(address(delegator1)), 0);
+        assertEq(proxy.stake(address(delegator1)), 0);
    }
 
    function test_delegate_voting() public {

@@ -39,8 +39,8 @@ interface ChiefLike {
 }
 
 contract VoteDelegate {
-    mapping(address => uint256) public delegators;
-    address public immutable delegate;
+    mapping(address => uint256) public stake;
+    address   public immutable delegate;
     TokenLike public immutable gov;
     TokenLike public immutable iou;
     ChiefLike public immutable chief;
@@ -57,26 +57,26 @@ contract VoteDelegate {
     }
 
     function add(uint256 x, uint256 y) internal pure returns (uint256 z) {
-        require((z = x + y) >= x, "ds-math-add-overflow");
+        require((z = x + y) >= x, "VoteDelegate/add-overflow");
     }
     function sub(uint256 x, uint256 y) internal pure returns (uint256 z) {
-        require((z = x - y) <= x, "ds-math-sub-underflow");
+        require((z = x - y) <= x, "VoteDelegate/sub-underflow");
     }
 
     modifier delegate_auth() {
-        require(msg.sender == delegate, "Sender must be delegate");
+        require(msg.sender == delegate, "VoteDelegate/sender-not-delegate");
         _;
     }
 
     function lock(uint256 wad) external {
-        delegators[msg.sender] = add(delegators[msg.sender], wad);
+        stake[msg.sender] = add(stake[msg.sender], wad);
         gov.pull(msg.sender, wad);
         chief.lock(wad);
         iou.push(msg.sender, wad);
     }
 
     function free(uint256 wad) external {
-        delegators[msg.sender] = sub(delegators[msg.sender], wad);
+        stake[msg.sender] = sub(stake[msg.sender], wad);
         iou.pull(msg.sender, wad);
         chief.free(wad);
         gov.push(msg.sender, wad);

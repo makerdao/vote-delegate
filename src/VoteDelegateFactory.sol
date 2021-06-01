@@ -2,7 +2,8 @@
 
 // Copyright (C) 2021 Dai Foundation
 
-// This program is free software: you can redistribute it and/or modify             // it under the terms of the GNU Affero General Public License as published by
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
@@ -20,8 +21,8 @@ pragma solidity 0.6.12;
 import "./VoteDelegate.sol";
 
 contract VoteDelegateFactory {
-    ChiefLike public immutable chief;
-    mapping(address => VoteDelegate) public delegates;
+    address public immutable chief;
+    mapping(address => address) public delegates;
 
     event VoteDelegateCreated(
         address indexed delegate,
@@ -34,25 +35,25 @@ contract VoteDelegateFactory {
     );
 
     constructor(address chief_) public {
-        chief = ChiefLike(chief_);
+        chief = chief_;
     }
 
     function isDelegate(address guy) public view returns (bool) {
-        return (address(delegates[guy]) != address(0x0));
+        return (delegates[guy] != address(0x0));
     }
 
-    function create() external returns (VoteDelegate voteDelegate) {
-        require(!isDelegate(msg.sender), "this address is already a delegate");
+    function create() external returns (address voteDelegate) {
+        require(!isDelegate(msg.sender), "VoteDelegateFactory/sender-is-already-delegate");
 
-        voteDelegate = new VoteDelegate(address(chief), msg.sender);
+        voteDelegate = address(new VoteDelegate(chief, msg.sender));
         delegates[msg.sender] = voteDelegate;
-        emit VoteDelegateCreated(msg.sender, address(voteDelegate));
+        emit VoteDelegateCreated(msg.sender, voteDelegate);
     }
 
     function destroy() external {
-        require(isDelegate(msg.sender), "No VoteDelegate found");
+        require(isDelegate(msg.sender), "VoteDelegateFactory/sender-is-not-delegate");
 
-        address voteDelegate = address(delegates[msg.sender]);
+        address voteDelegate = delegates[msg.sender];
         delete delegates[msg.sender];
         emit VoteDelegateDestroyed(msg.sender, voteDelegate);
     }
