@@ -49,11 +49,11 @@ contract VoteDelegate {
         chief = ChiefLike(_chief);
         delegate = _delegate;
 
-        gov = ChiefLike(_chief).GOV();
-        iou = ChiefLike(_chief).IOU();
+        TokenLike _gov = gov = ChiefLike(_chief).GOV();
+        TokenLike _iou = iou = ChiefLike(_chief).IOU();
 
-        ChiefLike(_chief).GOV().approve(_chief, uint256(-1));
-        ChiefLike(_chief).IOU().approve(_chief, uint256(-1));
+        _gov.approve(_chief, uint256(-1));
+        _iou.approve(_chief, uint256(-1));
     }
 
     function add(uint256 x, uint256 y) internal pure returns (uint256 z) {
