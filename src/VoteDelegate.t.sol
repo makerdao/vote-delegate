@@ -182,7 +182,7 @@ contract VoteDelegateTest is DSTest {
         assertEq(gov.balanceOf(address(chief)), currMKR);
         assertEq(iou.balanceOf(address(delegate)), 0);
         assertEq(proxy.stake(address(delegate)), 0);
-   }
+    }
 
    function test_delegator_lock_free() public {
         uint256 currMKR = gov.balanceOf(address(chief));
@@ -204,7 +204,7 @@ contract VoteDelegateTest is DSTest {
         assertEq(gov.balanceOf(address(chief)), currMKR);
         assertEq(iou.balanceOf(address(delegator1)), 0);
         assertEq(proxy.stake(address(delegator1)), 0);
-   }
+    }
    function test_delegate_voting() public {
         uint256 currMKR = gov.balanceOf(address(chief));
 
@@ -229,7 +229,7 @@ contract VoteDelegateTest is DSTest {
         delegate.doProxyVote(_yays);
         assertEq(chief.approvals(c1), 0 ether);
         assertEq(chief.approvals(c2), 10_100 ether);
-   }
+    }
 
    function test_delegate_polling() public {
         // We can't test much as they are pure events
@@ -246,7 +246,7 @@ contract VoteDelegateTest is DSTest {
         opts[1] = 3;
         delegate.doProxyVotePoll(ids, opts);
         delegate.doProxyWithdrawPoll(ids);
-   }
+    }
 
    function testFail_delegate_attempts_steal() public {
         delegate.approveGov(address(proxy));
@@ -259,7 +259,7 @@ contract VoteDelegateTest is DSTest {
 
         // Attempting to steal more MKR than you put in
         delegate.doProxyFree(101 ether);
-   }
+    }
 
    function testFail_attempt_steal_with_ious() public {
         delegator1.approveGov(address(proxy));
@@ -273,7 +273,7 @@ contract VoteDelegateTest is DSTest {
         delegator2.doChiefLock(20_000 ether);
 
         delegator2.doProxyFree(10_000 ether);
-   }
+    }
 
    function testFail_non_delegate_attempts_vote() public {
         delegate.approveGov(address(proxy));
@@ -288,5 +288,30 @@ contract VoteDelegateTest is DSTest {
         address[] memory yays = new address[](1);
         yays[0] = c1;
         delegator2.doProxyVote(yays);
-   }
+    }
+
+    function testFail_non_delegate_attempts_polling_vote() public {
+        delegator2.doProxyVotePoll(1, 1);
+    }
+
+    function testFail_non_delegate_attempts_polling_withdraw() public {
+        delegator2.doProxyWithdrawPoll(1);
+    }
+
+    function testFail_non_delegate_attempts_polling_vote_multiple() public {
+        uint256[] memory ids = new uint256[](2);
+        ids[0] = 1;
+        ids[1] = 2;
+        uint256[] memory opts = new uint256[](2);
+        opts[0] = 1;
+        opts[1] = 3;
+        delegator2.doProxyVotePoll(ids, opts);
+    }
+
+    function testFail_non_delegate_attempts_polling_withdraw_multiple() public {
+        uint256[] memory ids = new uint256[](2);
+        ids[0] = 1;
+        ids[1] = 2;
+        delegator2.doProxyWithdrawPoll(ids);
+    }
 }
