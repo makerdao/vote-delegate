@@ -20,10 +20,10 @@ pragma solidity 0.6.12;
 
 interface TokenLike {
     function balanceOf(address) external view returns (uint256);
-    function approve(address, uint256) external;
+    function approve(address, uint256) external returns (bool);
     function pull(address, uint256) external;
     function push(address, uint256) external;
-    function transfer(address, uint256) external;
+    function transfer(address, uint256) external returns (bool);
     function mint(address, uint256) external;
 }
 
