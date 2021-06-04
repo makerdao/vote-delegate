@@ -159,7 +159,7 @@ contract VoteDelegateTest is DSTest {
         delegator2.setProxy(proxy);
     }
 
-   function test_proxy_lock_free() public {
+    function test_proxy_lock_free() public {
         uint256 currMKR = gov.balanceOf(address(chief));
 
         delegate.approveGov(address(proxy));
@@ -184,7 +184,7 @@ contract VoteDelegateTest is DSTest {
         assertEq(proxy.stake(address(delegate)), 0);
     }
 
-   function test_delegator_lock_free() public {
+    function test_delegator_lock_free() public {
         uint256 currMKR = gov.balanceOf(address(chief));
 
         delegator1.approveGov(address(proxy));
@@ -205,7 +205,8 @@ contract VoteDelegateTest is DSTest {
         assertEq(iou.balanceOf(address(delegator1)), 0);
         assertEq(proxy.stake(address(delegator1)), 0);
     }
-   function test_delegate_voting() public {
+
+    function test_delegate_voting() public {
         uint256 currMKR = gov.balanceOf(address(chief));
 
         delegate.approveGov(address(proxy));
@@ -231,7 +232,7 @@ contract VoteDelegateTest is DSTest {
         assertEq(chief.approvals(c2), 10_100 ether);
     }
 
-   function test_delegate_polling() public {
+    function test_delegate_polling() public {
         // We can't test much as they are pure events
         // but at least we can check it doesn't revert
 
@@ -248,7 +249,7 @@ contract VoteDelegateTest is DSTest {
         delegate.doProxyWithdrawPoll(ids);
     }
 
-   function testFail_delegate_attempts_steal() public {
+    function testFail_delegate_attempts_steal() public {
         delegate.approveGov(address(proxy));
         delegate.approveIou(address(proxy));
         delegator1.approveGov(address(proxy));
@@ -261,7 +262,7 @@ contract VoteDelegateTest is DSTest {
         delegate.doProxyFree(101 ether);
     }
 
-   function testFail_attempt_steal_with_ious() public {
+    function testFail_attempt_steal_with_ious() public {
         delegator1.approveGov(address(proxy));
         delegator1.approveIou(address(proxy));
         delegator2.approveGov(address(chief));
@@ -275,7 +276,7 @@ contract VoteDelegateTest is DSTest {
         delegator2.doProxyFree(10_000 ether);
     }
 
-   function testFail_non_delegate_attempts_vote() public {
+    function testFail_non_delegate_attempts_vote() public {
         delegate.approveGov(address(proxy));
         delegate.approveIou(address(proxy));
         delegator1.approveGov(address(proxy));
