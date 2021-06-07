@@ -315,7 +315,7 @@ contract VoteDelegateTest is DSTest {
    function testFail_revoke_not_allowed() public {
         (Revoker revoker, ) = revoke_setup();
         Revoker otherRevoker = new Revoker();
-        assertTrue(address(otherRevoker) == address(revoker));
+        assertTrue(address(otherRevoker) != address(revoker));
         otherRevoker.revoke(proxy, address(delegator1));
    }
 }
