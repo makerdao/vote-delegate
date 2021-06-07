@@ -187,7 +187,7 @@ contract VoteDelegateTest is DSTest {
    }
 
    function test_delegator_lock_free_fuzz(uint256 wad_seed) public {
-        uint256 wad = 1 ether + wad_seed % 20_000 ether;
+        uint256 wad = wad_seed < 1 ether ?  wad_seed += 1 ether : wad_seed % 20_000 ether;
         uint256 currMKR = gov.balanceOf(address(chief));
 
         delegator2.approveGov(address(proxy));
@@ -238,8 +238,8 @@ contract VoteDelegateTest is DSTest {
    }
 
    function test_delegate_voting_fuzz(uint256 wad_seed, uint256 wad2_seed) public {
-        uint256 wad = 1 ether + wad_seed % 100 ether;
-        uint256 wad2 = 1 ether + wad2_seed % 20_000 ether;
+        uint256 wad = wad_seed < 1 ether ?  wad_seed += 1 ether : wad_seed % 100 ether;
+        uint256 wad2 = wad2_seed < 1 ether ?  wad2_seed += 1 ether : wad2_seed % 20_000 ether;
         uint256 currMKR = gov.balanceOf(address(chief));
 
         delegate.approveGov(address(proxy));
