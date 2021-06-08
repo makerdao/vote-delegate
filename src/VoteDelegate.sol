@@ -42,11 +42,8 @@ contract VoteDelegate {
 
     event Lock(uint256 wad);
     event Free(uint256 wad);
-
-    event VoteDelegateDestroyed(
-        address indexed delegate,
-        address indexed voteDelegate
-    );
+    event Vote(address[] yays);
+    event Vote(bytes32 slate);
 
     constructor(address _chief, address _delegate) public {
         chief = ChiefLike(_chief);
@@ -91,11 +88,15 @@ contract VoteDelegate {
         emit Free(wad);
     }
 
-    function vote(address[] memory yays) external delegate_auth returns (bytes32) {
-        return chief.vote(yays);
+    function vote(address[] memory yays) external delegate_auth returns (bytes32 result) {
+        result = chief.vote(yays);
+
+        emit Vote(yays);
     }
 
     function vote(bytes32 slate) external delegate_auth {
         chief.vote(slate);
+
+        emit Vote(slate);
     }
 }
