@@ -19,19 +19,14 @@
 pragma solidity 0.6.12;
 
 interface TokenLike {
-    function balanceOf(address) external view returns (uint256);
-    function approve(address, uint256) external;
+    function approve(address, uint256) external returns (bool);
     function pull(address, uint256) external;
     function push(address, uint256) external;
-    function transfer(address, uint256) external;
-    function mint(address, uint256) external;
 }
 
 interface ChiefLike {
     function GOV() external view returns (TokenLike);
     function IOU() external view returns (TokenLike);
-    function approvals(address) external view returns (uint256);
-    function deposits(address) external view returns (uint256);
     function lock(uint256) external;
     function free(uint256) external;
     function vote(address[] calldata) external returns (bytes32);
