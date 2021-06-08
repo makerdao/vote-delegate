@@ -25,12 +25,7 @@ contract VoteDelegateFactory {
     address public immutable polling;
     mapping(address => address) public delegates;
 
-    event VoteDelegateCreated(
-        address indexed delegate,
-        address indexed voteDelegate
-    );
-
-    event VoteDelegateDestroyed(
+    event CreateVoteDelegate(
         address indexed delegate,
         address indexed voteDelegate
     );
@@ -41,7 +36,7 @@ contract VoteDelegateFactory {
     }
 
     function isDelegate(address guy) public view returns (bool) {
-        return (delegates[guy] != address(0));
+        return delegates[guy] != address(0);
     }
 
     function create() external returns (address voteDelegate) {
@@ -49,14 +44,6 @@ contract VoteDelegateFactory {
 
         voteDelegate = address(new VoteDelegate(chief, polling, msg.sender));
         delegates[msg.sender] = voteDelegate;
-        emit VoteDelegateCreated(msg.sender, voteDelegate);
-    }
-
-    function destroy() external {
-        require(isDelegate(msg.sender), "VoteDelegateFactory/sender-is-not-delegate");
-
-        address voteDelegate = delegates[msg.sender];
-        delete delegates[msg.sender];
-        emit VoteDelegateDestroyed(msg.sender, voteDelegate);
+        emit CreateVoteDelegate(msg.sender, voteDelegate);
     }
 }

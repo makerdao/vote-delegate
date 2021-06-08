@@ -48,6 +48,9 @@ contract VoteDelegate {
     ChiefLike   public immutable chief;
     PollingLike public immutable polling;
 
+    event Lock(address indexed usr, uint256 wad);
+    event Free(address indexed usr, uint256 wad);
+
     constructor(address _chief, address _polling, address _delegate) public {
         chief = ChiefLike(_chief);
         polling = PollingLike(_polling);
@@ -56,15 +59,12 @@ contract VoteDelegate {
         TokenLike _gov = gov = ChiefLike(_chief).GOV();
         TokenLike _iou = iou = ChiefLike(_chief).IOU();
 
-        _gov.approve(_chief, uint256(-1));
-        _iou.approve(_chief, uint256(-1));
+        _gov.approve(_chief, type(uint256).max);
+        _iou.approve(_chief, type(uint256).max);
     }
 
     function add(uint256 x, uint256 y) internal pure returns (uint256 z) {
         require((z = x + y) >= x, "VoteDelegate/add-overflow");
-    }
-    function sub(uint256 x, uint256 y) internal pure returns (uint256 z) {
-        require((z = x - y) <= x, "VoteDelegate/sub-underflow");
     }
 
     modifier delegate_auth() {
@@ -77,18 +77,23 @@ contract VoteDelegate {
         gov.pull(msg.sender, wad);
         chief.lock(wad);
         iou.push(msg.sender, wad);
+
+        emit Lock(msg.sender, wad);
     }
 
     function free(uint256 wad) external {
-        stake[msg.sender] = sub(stake[msg.sender], wad);
+        require(stake[msg.sender] >= wad, "VoteDelegate/insufficient-stake");
+
+        stake[msg.sender] -= wad;
         iou.pull(msg.sender, wad);
         chief.free(wad);
         gov.push(msg.sender, wad);
+
+        emit Free(msg.sender, wad);
     }
 
-    // Executive vote
-    function vote(address[] memory yays) external delegate_auth returns (bytes32) {
-        return chief.vote(yays);
+    function vote(address[] memory yays) external delegate_auth returns (bytes32 result) {
+        result = chief.vote(yays);
     }
 
     function vote(bytes32 slate) external delegate_auth {
