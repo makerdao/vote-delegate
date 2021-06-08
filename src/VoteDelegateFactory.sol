@@ -41,7 +41,7 @@ contract VoteDelegateFactory {
     }
 
     function isDelegate(address guy) public view returns (bool) {
-        return (delegates[guy] != address(0x0));
+        return (delegates[guy] != address(0));
     }
 
     function create() external returns (address voteDelegate) {
