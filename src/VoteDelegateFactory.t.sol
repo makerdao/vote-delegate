@@ -37,10 +37,6 @@ contract VoteUser {
     function doCreate() public returns (VoteDelegate) {
         return VoteDelegate(voteDelegateFactory.create());
     }
-
-    function doDestroy() public {
-        voteDelegateFactory.destroy();
-    }
 }
 
 
@@ -86,22 +82,5 @@ contract VoteDelegateFactoryTest is DSTest {
     function testFail_create() public {
         delegate.doCreate();
         delegate.doCreate();
-    }
-
-    function testFail_destroy() public {
-        delegator.doDestroy();
-    }
-
-    function test_destroy() public {
-        VoteDelegate voteDelegate = delegate.doCreate();
-        delegate.doDestroy();
-        assertTrue(!voteDelegateFactory.isDelegate(address(delegate)));
-        // test that the delegate can now make another VoteDelegate
-        voteDelegate = delegate.doCreate();
-        assertTrue(voteDelegateFactory.isDelegate(address(delegate)));
-        assertEq(
-            address(voteDelegateFactory.delegates(address(delegate))),
-            address(voteDelegate)
-        );
     }
 }

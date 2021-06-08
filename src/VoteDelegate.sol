@@ -40,6 +40,14 @@ contract VoteDelegate {
     TokenLike public immutable iou;
     ChiefLike public immutable chief;
 
+    event Lock(uint256 wad);
+    event Free(uint256 wad);
+
+    event VoteDelegateDestroyed(
+        address indexed delegate,
+        address indexed voteDelegate
+    );
+
     constructor(address _chief, address _delegate) public {
         chief = ChiefLike(_chief);
         delegate = _delegate;
@@ -47,8 +55,8 @@ contract VoteDelegate {
         TokenLike _gov = gov = ChiefLike(_chief).GOV();
         TokenLike _iou = iou = ChiefLike(_chief).IOU();
 
-        _gov.approve(_chief, uint256(-1));
-        _iou.approve(_chief, uint256(-1));
+        _gov.approve(_chief, type(uint256).max);
+        _iou.approve(_chief, type(uint256).max);
     }
 
     function add(uint256 x, uint256 y) internal pure returns (uint256 z) {
@@ -68,13 +76,19 @@ contract VoteDelegate {
         gov.pull(msg.sender, wad);
         chief.lock(wad);
         iou.push(msg.sender, wad);
+
+        emit Lock(wad);
     }
 
     function free(uint256 wad) external {
-        stake[msg.sender] = sub(stake[msg.sender], wad);
+        require(stake[msg.sender] >= wad, "VoteDelegate/insufficient-stake");
+
+        stake[msg.sender] -= wad;
         iou.pull(msg.sender, wad);
         chief.free(wad);
         gov.push(msg.sender, wad);
+
+        emit Free(wad);
     }
 
     function vote(address[] memory yays) external delegate_auth returns (bytes32) {
