@@ -48,10 +48,8 @@ contract VoteDelegate {
     ChiefLike   public immutable chief;
     PollingLike public immutable polling;
 
-    event Lock(uint256 wad);
-    event Free(uint256 wad);
-    event Vote(address[] yays);
-    event Vote(bytes32 slate);
+    event Lock(address indexed usr, uint256 wad);
+    event Free(address indexed usr, uint256 wad);
 
     constructor(address _chief, address _polling, address _delegate) public {
         chief = ChiefLike(_chief);
@@ -80,7 +78,7 @@ contract VoteDelegate {
         chief.lock(wad);
         iou.push(msg.sender, wad);
 
-        emit Lock(wad);
+        emit Lock(msg.sender, wad);
     }
 
     function free(uint256 wad) external {
@@ -91,19 +89,15 @@ contract VoteDelegate {
         chief.free(wad);
         gov.push(msg.sender, wad);
 
-        emit Free(wad);
+        emit Free(msg.sender, wad);
     }
 
     function vote(address[] memory yays) external delegate_auth returns (bytes32 result) {
         result = chief.vote(yays);
-
-        emit Vote(yays);
     }
 
     function vote(bytes32 slate) external delegate_auth {
         chief.vote(slate);
-
-        emit Vote(slate);
     }
 
     // Polling vote
