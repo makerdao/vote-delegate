@@ -22,6 +22,7 @@ import "./VoteDelegate.sol";
 
 contract VoteDelegateFactory {
     address public immutable chief;
+    address public immutable polling;
     mapping(address => address) public delegates;
 
     event CreateVoteDelegate(
@@ -29,8 +30,9 @@ contract VoteDelegateFactory {
         address indexed voteDelegate
     );
 
-    constructor(address chief_) public {
-        chief = chief_;
+    constructor(address _chief, address _polling) public {
+        chief = _chief;
+        polling = _polling;
     }
 
     function isDelegate(address guy) public view returns (bool) {
@@ -40,7 +42,7 @@ contract VoteDelegateFactory {
     function create() external returns (address voteDelegate) {
         require(!isDelegate(msg.sender), "VoteDelegateFactory/sender-is-already-delegate");
 
-        voteDelegate = address(new VoteDelegate(chief, msg.sender));
+        voteDelegate = address(new VoteDelegate(chief, polling, msg.sender));
         delegates[msg.sender] = voteDelegate;
         emit CreateVoteDelegate(msg.sender, voteDelegate);
     }

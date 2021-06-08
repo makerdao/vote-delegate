@@ -49,6 +49,7 @@ contract VoteDelegateFactoryTest is DSTest {
     TokenLike gov;
     TokenLike iou;
     ChiefLike chief;
+    PollingLike polling;
 
     VoteUser delegate;
     VoteUser delegator;
@@ -57,16 +58,18 @@ contract VoteDelegateFactoryTest is DSTest {
         hevm = Hevm(HEVM_ADDRESS);
 
         chief = ChiefLike(0x0a3f6849f78076aefaDf113F5BED87720274dDC0);
+        polling = PollingLike(0xD3A9FE267852281a1e6307a1C37CDfD76d39b133);
         gov = chief.GOV();
         iou = chief.IOU();
 
-        voteDelegateFactory = new VoteDelegateFactory(address(chief));
+        voteDelegateFactory = new VoteDelegateFactory(address(chief), address(polling));
         delegator = new VoteUser(voteDelegateFactory);
         delegate  = new VoteUser(voteDelegateFactory);
     }
 
     function test_constructor() public {
         assertEq(address(voteDelegateFactory.chief()), address(chief));
+        assertEq(address(voteDelegateFactory.polling()), address(polling));
     }
 
     function test_create() public {

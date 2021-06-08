@@ -33,20 +33,29 @@ interface ChiefLike {
     function vote(bytes32) external;
 }
 
+interface PollingLike {
+    function withdrawPoll(uint256) external;
+    function vote(uint256, uint256) external;
+    function withdrawPoll(uint256[] calldata) external;
+    function vote(uint256[] calldata, uint256[] calldata) external;
+}
+
 contract VoteDelegate {
     mapping(address => uint256) public stake;
-    address   public immutable delegate;
-    TokenLike public immutable gov;
-    TokenLike public immutable iou;
-    ChiefLike public immutable chief;
+    address     public immutable delegate;
+    TokenLike   public immutable gov;
+    TokenLike   public immutable iou;
+    ChiefLike   public immutable chief;
+    PollingLike public immutable polling;
 
     event Lock(uint256 wad);
     event Free(uint256 wad);
     event Vote(address[] yays);
     event Vote(bytes32 slate);
 
-    constructor(address _chief, address _delegate) public {
+    constructor(address _chief, address _polling, address _delegate) public {
         chief = ChiefLike(_chief);
+        polling = PollingLike(_polling);
         delegate = _delegate;
 
         TokenLike _gov = gov = ChiefLike(_chief).GOV();
@@ -98,5 +107,22 @@ contract VoteDelegate {
         chief.vote(slate);
 
         emit Vote(slate);
+    }
+
+    // Polling vote
+    function votePoll(uint256 pollId, uint256 optionId) external delegate_auth {
+        polling.vote(pollId, optionId);
+    }
+
+    function withdrawPoll(uint256 pollId) external delegate_auth {
+        polling.withdrawPoll(pollId);
+    }
+
+    function votePoll(uint256[] calldata pollIds, uint256[] calldata optionIds) external delegate_auth {
+        polling.vote(pollIds, optionIds);
+    }
+
+    function withdrawPoll(uint256[] calldata pollIds) external delegate_auth {
+        polling.withdrawPoll(pollIds);
     }
 }
