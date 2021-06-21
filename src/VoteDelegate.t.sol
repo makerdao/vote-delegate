@@ -393,6 +393,43 @@ contract VoteDelegateTest is DSTest {
         delegate.doProxyVote(yays);
     }
 
+    function test_delegate_voting_fuzz(uint256 wad_seed, uint256 wad2_seed) public {
+        uint256 wad = wad_seed < 1 ether ?  wad_seed += 1 ether : wad_seed % 100 ether;
+        uint256 wad2 = wad2_seed < 1 ether ?  wad2_seed += 1 ether : wad2_seed % 20_000 ether;
+        uint256 currMKR = gov.balanceOf(address(chief));
+
+        delegate.approveGov(address(proxy));
+        delegate.approveIou(address(proxy));
+        delegator2.approveGov(address(proxy));
+        delegator2.approveIou(address(proxy));
+
+        uint256 delGovBalance = gov.balanceOf(address(delegate));
+        uint256 del2GovBalance = gov.balanceOf(address(delegator2));
+
+        delegate.doProxyLock(wad);
+        delegator2.doProxyLock(wad2);
+
+        assertEq(gov.balanceOf(address(delegate)), delGovBalance - wad);
+        assertEq(gov.balanceOf(address(delegator2)), del2GovBalance - wad2);
+        assertEq(iou.balanceOf(address(delegate)), wad);
+        assertEq(iou.balanceOf(address(delegator2)), wad2);
+        assertEq(proxy.stake(address(delegate)), wad);
+        assertEq(proxy.stake(address(delegator2)), wad2);
+        assertEq(gov.balanceOf(address(chief)), currMKR + wad + wad2);
+
+        address[] memory yays = new address[](1);
+        yays[0] = c1;
+        delegate.doProxyVote(yays);
+        assertEq(chief.approvals(c1), wad + wad2);
+        assertEq(chief.approvals(c2), 0 ether);
+
+        address[] memory _yays = new address[](1);
+        _yays[0] = c2;
+        delegate.doProxyVote(_yays);
+        assertEq(chief.approvals(c1), 0 ether);
+        assertEq(chief.approvals(c2), wad + wad2);
+    }
+
     function testFail_delegate_attempts_steal() public {
         delegate.approveGov(address(proxy));
         delegate.approveIou(address(proxy));
