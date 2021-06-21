@@ -206,7 +206,7 @@ contract VoteDelegateTest is DSTest {
         assertEq(proxy.stake(address(delegate)), 0);
     }
 
-   function test_proxy_lock_free_after_expiration() public {
+    function test_proxy_lock_free_after_expiration() public {
         uint256 currMKR = gov.balanceOf(address(chief));
 
         delegate.approveGov(address(proxy));
@@ -234,9 +234,9 @@ contract VoteDelegateTest is DSTest {
         assertEq(gov.balanceOf(address(chief)), currMKR);
         assertEq(iou.balanceOf(address(delegate)), 0);
         assertEq(proxy.stake(address(delegate)), 0);
-   }
+    }
 
-   function testFail_proxy_lock_after_expiration() public {
+    function testFail_proxy_lock_after_expiration() public {
         delegate.approveGov(address(proxy));
         delegate.approveIou(address(proxy));
 
@@ -248,9 +248,9 @@ contract VoteDelegateTest is DSTest {
 
         // Fail here. Don't allow locking after expiry.
         delegate.doProxyLock(100 ether);
-   }
+    }
 
-   function test_delegator_lock_free() public {
+    function test_delegator_lock_free() public {
         uint256 currMKR = gov.balanceOf(address(chief));
 
         delegator1.approveGov(address(proxy));
@@ -297,7 +297,7 @@ contract VoteDelegateTest is DSTest {
         assertEq(proxy.stake(address(delegator2)), 0);
     }
 
-   function test_delegator_lock_free_after_expiration() public {
+    function test_delegator_lock_free_after_expiration() public {
         uint256 currMKR = gov.balanceOf(address(chief));
 
         delegator1.approveGov(address(proxy));
@@ -322,7 +322,7 @@ contract VoteDelegateTest is DSTest {
         assertEq(gov.balanceOf(address(chief)), currMKR);
         assertEq(iou.balanceOf(address(delegator1)), 0);
         assertEq(proxy.stake(address(delegator1)), 0);
-   }
+    }
 
     function test_delegate_voting() public {
         uint256 currMKR = gov.balanceOf(address(chief));
@@ -368,7 +368,7 @@ contract VoteDelegateTest is DSTest {
     }
 
 
-   function testFail_delegate_voting_after_expiration() public {
+    function testFail_delegate_voting_after_expiration() public {
         uint256 currMKR = gov.balanceOf(address(chief));
 
         delegate.approveGov(address(proxy));
@@ -391,9 +391,9 @@ contract VoteDelegateTest is DSTest {
 
         // Fail here after expiration
         delegate.doProxyVote(yays);
-   }
+    }
 
-   function testFail_delegate_attempts_steal() public {
+    function testFail_delegate_attempts_steal() public {
         delegate.approveGov(address(proxy));
         delegate.approveIou(address(proxy));
         delegator1.approveGov(address(proxy));
