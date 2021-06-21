@@ -19,82 +19,108 @@
 pragma solidity 0.6.12;
 
 interface TokenLike {
-    function balanceOf(address) external view returns (uint256);
-    function approve(address, uint256) external;
+    function approve(address, uint256) external returns (bool);
     function pull(address, uint256) external;
     function push(address, uint256) external;
-    function transfer(address, uint256) external;
-    function mint(address, uint256) external;
 }
 
 interface ChiefLike {
     function GOV() external view returns (TokenLike);
     function IOU() external view returns (TokenLike);
-    function approvals(address) external view returns (uint256);
-    function deposits(address) external view returns (uint256);
     function lock(uint256) external;
     function free(uint256) external;
     function vote(address[] calldata) external returns (bytes32);
     function vote(bytes32) external;
 }
 
+interface PollingLike {
+    function withdrawPoll(uint256) external;
+    function vote(uint256, uint256) external;
+    function withdrawPoll(uint256[] calldata) external;
+    function vote(uint256[] calldata, uint256[] calldata) external;
+}
+
 contract VoteDelegate {
-    mapping(address => uint256) public delegators;
-    address   public immutable delegate;
-    uint256   public immutable expiration;
-    TokenLike public immutable gov;
-    TokenLike public immutable iou;
-    ChiefLike public immutable chief;
+    mapping(address => uint256) public stake;
+    address     public immutable delegate;
+    TokenLike   public immutable gov;
+    TokenLike   public immutable iou;
+    ChiefLike   public immutable chief;
+    PollingLike public immutable polling;
+    uint256     public immutable expiration;
 
-    constructor(address _chief, address _delegate, uint256 _expiration) public {
-        require(_expiration > block.timestamp && _expiration < block.timestamp + 20 * 365 days, "invalid expiration");
+    event Lock(address indexed usr, uint256 wad);
+    event Free(address indexed usr, uint256 wad);
+
+    constructor(address _chief, address _polling, address _delegate) public {
         chief = ChiefLike(_chief);
+        polling = PollingLike(_polling);
         delegate = _delegate;
-        expiration = _expiration;
+        expiration = block.timestamp + 365 days;
 
-        gov = ChiefLike(_chief).GOV();
-        iou = ChiefLike(_chief).IOU();
+        TokenLike _gov = gov = ChiefLike(_chief).GOV();
+        TokenLike _iou = iou = ChiefLike(_chief).IOU();
 
-        ChiefLike(_chief).GOV().approve(_chief, uint256(-1));
-        ChiefLike(_chief).IOU().approve(_chief, uint256(-1));
+        _gov.approve(_chief, type(uint256).max);
+        _iou.approve(_chief, type(uint256).max);
     }
 
     function add(uint256 x, uint256 y) internal pure returns (uint256 z) {
-        require((z = x + y) >= x, "ds-math-add-overflow");
-    }
-    function sub(uint256 x, uint256 y) internal pure returns (uint256 z) {
-        require((z = x - y) <= x, "ds-math-sub-underflow");
+        require((z = x + y) >= x, "VoteDelegate/add-overflow");
     }
 
     modifier delegate_auth() {
-        require(msg.sender == delegate, "Sender must be delegate");
+        require(msg.sender == delegate, "VoteDelegate/sender-not-delegate");
         _;
     }
 
     modifier live() {
-        require(block.timestamp < expiration, "Delegation contract expired");
+        require(block.timestamp < expiration, "VoteDelegate/delegation-contract-expired");
         _;
     }
 
     function lock(uint256 wad) external live {
-        delegators[msg.sender] = add(delegators[msg.sender], wad);
+        stake[msg.sender] = add(stake[msg.sender], wad);
         gov.pull(msg.sender, wad);
         chief.lock(wad);
         iou.push(msg.sender, wad);
+
+        emit Lock(msg.sender, wad);
     }
 
     function free(uint256 wad) external {
-        delegators[msg.sender] = sub(delegators[msg.sender], wad);
+        require(stake[msg.sender] >= wad, "VoteDelegate/insufficient-stake");
+
+        stake[msg.sender] -= wad;
         iou.pull(msg.sender, wad);
         chief.free(wad);
         gov.push(msg.sender, wad);
+
+        emit Free(msg.sender, wad);
     }
 
-    function vote(address[] memory yays) external delegate_auth live returns (bytes32) {
-        return chief.vote(yays);
+    function vote(address[] memory yays) external delegate_auth live returns (bytes32 result) {
+        result = chief.vote(yays);
     }
 
     function vote(bytes32 slate) external delegate_auth live {
         chief.vote(slate);
+    }
+
+    // Polling vote
+    function votePoll(uint256 pollId, uint256 optionId) external delegate_auth live {
+        polling.vote(pollId, optionId);
+    }
+
+    function withdrawPoll(uint256 pollId) external delegate_auth live {
+        polling.withdrawPoll(pollId);
+    }
+
+    function votePoll(uint256[] calldata pollIds, uint256[] calldata optionIds) external delegate_auth live {
+        polling.vote(pollIds, optionIds);
+    }
+
+    function withdrawPoll(uint256[] calldata pollIds) external delegate_auth live {
+        polling.withdrawPoll(pollIds);
     }
 }
