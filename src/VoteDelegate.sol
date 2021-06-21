@@ -89,14 +89,19 @@ contract VoteDelegate {
     }
 
     function free(uint256 wad) external {
-        require(stake[msg.sender] >= wad, "VoteDelegate/insufficient-stake");
+        free(msg.sender, wad);
+    }
 
-        stake[msg.sender] -= wad;
-        iou.pull(msg.sender, wad);
+    function free(address usr, uint256 wad) public {
+        require(usr == msg.sender || block.timestamp >= expiration, "VoteDelegate/invalid-usr");
+        require(stake[usr] >= wad, "VoteDelegate/insufficient-stake");
+
+        stake[usr] -= wad;
+        iou.pull(usr, wad);
         chief.free(wad);
-        gov.push(msg.sender, wad);
+        gov.push(usr, wad);
 
-        emit Free(msg.sender, wad);
+        emit Free(usr, wad);
     }
 
     function vote(address[] memory yays) external delegate_auth live returns (bytes32 result) {

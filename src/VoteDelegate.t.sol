@@ -67,7 +67,7 @@ contract Voter {
         iou = TokenLike(chief.IOU());
     }
 
-    function expiration() public returns (uint256) {
+    function expiration() public view returns (uint256) {
         return proxy.expiration();
     }
 
@@ -132,6 +132,18 @@ contract Voter {
     }
 }
 
+contract NonVoter {
+    VoteDelegate public proxy;
+
+    constructor(VoteDelegate proxy_) public {
+        proxy = proxy_;
+    }
+
+    function doFree(address usr, uint256 wad) public {
+        proxy.free(usr, wad);
+    }
+}
+
 contract VoteDelegateTest is DSTest {
     Hevm hevm;
 
@@ -149,6 +161,7 @@ contract VoteDelegateTest is DSTest {
     Voter delegate;
     Voter delegator1;
     Voter delegator2;
+    NonVoter party;
 
     function setUp() public {
         hevm = Hevm(HEVM_ADDRESS);
@@ -178,6 +191,8 @@ contract VoteDelegateTest is DSTest {
         delegate.setProxy(proxy);
         delegator1.setProxy(proxy);
         delegator2.setProxy(proxy);
+
+        party = new NonVoter(proxy);
     }
 
     function test_proxy_lock_free() public {
@@ -204,6 +219,54 @@ contract VoteDelegateTest is DSTest {
         assertEq(gov.balanceOf(address(chief)), currMKR);
         assertEq(iou.balanceOf(address(delegate)), 0);
         assertEq(proxy.stake(address(delegate)), 0);
+    }
+
+    function test_3rdParty_lock_free() public {
+        uint256 currMKR = gov.balanceOf(address(chief));
+
+        delegate.approveGov(address(proxy));
+        delegate.approveIou(address(proxy));
+
+        assertEq(gov.balanceOf(address(delegate)), 100 ether);
+        assertEq(iou.balanceOf(address(delegate)), 0);
+
+        delegate.doProxyLock(100 ether);
+        assertEq(gov.balanceOf(address(delegate)), 0);
+        assertEq(gov.balanceOf(address(chief)), currMKR + 100 ether);
+        assertEq(iou.balanceOf(address(delegate)), 100 ether);
+        assertEq(proxy.stake(address(delegate)), 100 ether);
+
+        // Comply with Chief's flash loan protection
+        hevm.roll(block.number + 1);
+        hevm.warp(proxy.expiration() + 1); // Only works after expiration
+
+        party.doFree(address(delegate), 100 ether);
+        assertEq(gov.balanceOf(address(delegate)), 100 ether);
+        assertEq(gov.balanceOf(address(chief)), currMKR);
+        assertEq(iou.balanceOf(address(delegate)), 0);
+        assertEq(proxy.stake(address(delegate)), 0);
+    }
+
+    function testFail_3rdParty_lock_free() public {
+        uint256 currMKR = gov.balanceOf(address(chief));
+
+        delegate.approveGov(address(proxy));
+        delegate.approveIou(address(proxy));
+
+        assertEq(gov.balanceOf(address(delegate)), 100 ether);
+        assertEq(iou.balanceOf(address(delegate)), 0);
+
+        delegate.doProxyLock(100 ether);
+        assertEq(gov.balanceOf(address(delegate)), 0);
+        assertEq(gov.balanceOf(address(chief)), currMKR + 100 ether);
+        assertEq(iou.balanceOf(address(delegate)), 100 ether);
+        assertEq(proxy.stake(address(delegate)), 100 ether);
+
+        // Comply with Chief's flash loan protection
+        hevm.roll(block.number + 1);
+        hevm.warp(block.timestamp + 1); // Does not work prior to expiration
+
+        party.doFree(address(delegate), 100 ether);
     }
 
     function test_proxy_lock_free_after_expiration() public {
