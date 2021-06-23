@@ -245,6 +245,7 @@ contract VoteDelegateTest is DSTest {
 
         // Warp past expiration
         hevm.warp(block.timestamp + 9001 days);
+        assertTrue(block.timestamp > delegate.expiration());
 
         // Fail here. Don't allow locking after expiry.
         delegate.doProxyLock(100 ether);
@@ -313,7 +314,6 @@ contract VoteDelegateTest is DSTest {
 
         // Warp past expiration
         hevm.warp(block.timestamp + 9001 days);
-
         assertTrue(block.timestamp > delegate.expiration());
 
         // Always allow freeing after expiration.
@@ -388,6 +388,7 @@ contract VoteDelegateTest is DSTest {
 
         // Warp past expiration
         hevm.warp(block.timestamp + 9001 days);
+        assertTrue(block.timestamp > delegate.expiration());
 
         // Fail here after expiration
         delegate.doProxyVote(yays);
