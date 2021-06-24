@@ -47,6 +47,7 @@ contract VoteDelegate {
     TokenLike   public immutable iou;
     ChiefLike   public immutable chief;
     PollingLike public immutable polling;
+    uint256     public immutable expiration;
 
     event Lock(address indexed usr, uint256 wad);
     event Free(address indexed usr, uint256 wad);
@@ -55,6 +56,7 @@ contract VoteDelegate {
         chief = ChiefLike(_chief);
         polling = PollingLike(_polling);
         delegate = _delegate;
+        expiration = block.timestamp + 365 days;
 
         TokenLike _gov = gov = ChiefLike(_chief).GOV();
         TokenLike _iou = iou = ChiefLike(_chief).IOU();
@@ -72,7 +74,12 @@ contract VoteDelegate {
         _;
     }
 
-    function lock(uint256 wad) external {
+    modifier live() {
+        require(block.timestamp < expiration, "VoteDelegate/delegation-contract-expired");
+        _;
+    }
+
+    function lock(uint256 wad) external live {
         stake[msg.sender] = add(stake[msg.sender], wad);
         gov.pull(msg.sender, wad);
         chief.lock(wad);
@@ -92,28 +99,28 @@ contract VoteDelegate {
         emit Free(msg.sender, wad);
     }
 
-    function vote(address[] memory yays) external delegate_auth returns (bytes32 result) {
+    function vote(address[] memory yays) external delegate_auth live returns (bytes32 result) {
         result = chief.vote(yays);
     }
 
-    function vote(bytes32 slate) external delegate_auth {
+    function vote(bytes32 slate) external delegate_auth live {
         chief.vote(slate);
     }
 
     // Polling vote
-    function votePoll(uint256 pollId, uint256 optionId) external delegate_auth {
+    function votePoll(uint256 pollId, uint256 optionId) external delegate_auth live {
         polling.vote(pollId, optionId);
     }
 
-    function withdrawPoll(uint256 pollId) external delegate_auth {
+    function withdrawPoll(uint256 pollId) external delegate_auth live {
         polling.withdrawPoll(pollId);
     }
 
-    function votePoll(uint256[] calldata pollIds, uint256[] calldata optionIds) external delegate_auth {
+    function votePoll(uint256[] calldata pollIds, uint256[] calldata optionIds) external delegate_auth live {
         polling.vote(pollIds, optionIds);
     }
 
-    function withdrawPoll(uint256[] calldata pollIds) external delegate_auth {
+    function withdrawPoll(uint256[] calldata pollIds) external delegate_auth live {
         polling.withdrawPoll(pollIds);
     }
 }

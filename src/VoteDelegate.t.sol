@@ -67,6 +67,10 @@ contract Voter {
         iou = TokenLike(chief.IOU());
     }
 
+    function expiration() public returns (uint256) {
+        return proxy.expiration();
+    }
+
     function setProxy(VoteDelegate proxy_) public {
         proxy = proxy_;
     }
@@ -193,8 +197,138 @@ contract VoteDelegateTest is DSTest {
 
         // Comply with Chief's flash loan protection
         hevm.roll(block.number + 1);
+        hevm.warp(block.timestamp + 1);
 
         delegate.doProxyFree(100 ether);
+        assertEq(gov.balanceOf(address(delegate)), 100 ether);
+        assertEq(gov.balanceOf(address(chief)), currMKR);
+        assertEq(iou.balanceOf(address(delegate)), 0);
+        assertEq(proxy.stake(address(delegate)), 0);
+    }
+
+    function test_proxy_lock_free_after_expiration() public {
+        uint256 currMKR = gov.balanceOf(address(chief));
+
+        delegate.approveGov(address(proxy));
+        delegate.approveIou(address(proxy));
+
+        assertEq(gov.balanceOf(address(delegate)), 100 ether);
+        assertEq(iou.balanceOf(address(delegate)), 0);
+
+        delegate.doProxyLock(100 ether);
+        assertEq(gov.balanceOf(address(delegate)), 0);
+        assertEq(gov.balanceOf(address(chief)), currMKR + 100 ether);
+        assertEq(iou.balanceOf(address(delegate)), 100 ether);
+        assertEq(proxy.stake(address(delegate)), 100 ether);
+
+        // Flash loan protection
+        hevm.roll(block.number + 1);
+
+        // Warp past expiration
+        hevm.warp(block.timestamp + 9001 days);
+
+        assertTrue(block.timestamp > delegate.expiration());
+        // Always allow freeing after expiration
+        delegate.doProxyFree(100 ether);
+        assertEq(gov.balanceOf(address(delegate)), 100 ether);
+        assertEq(gov.balanceOf(address(chief)), currMKR);
+        assertEq(iou.balanceOf(address(delegate)), 0);
+        assertEq(proxy.stake(address(delegate)), 0);
+    }
+
+    function testFail_proxy_lock_after_expiration() public {
+        delegate.approveGov(address(proxy));
+        delegate.approveIou(address(proxy));
+
+        // Flash loan protection
+        hevm.roll(block.number + 1);
+
+        // Warp past expiration
+        hevm.warp(block.timestamp + 9001 days);
+        assertTrue(block.timestamp > delegate.expiration());
+
+        // Fail here. Don't allow locking after expiry.
+        delegate.doProxyLock(100 ether);
+    }
+
+    function test_proxy_lock_free_around_expiration() public {
+        uint256 currMKR = gov.balanceOf(address(chief));
+
+        delegate.approveGov(address(proxy));
+        delegate.approveIou(address(proxy));
+
+        assertEq(gov.balanceOf(address(delegate)), 100 ether);
+        assertEq(iou.balanceOf(address(delegate)), 0);
+
+        address[] memory yays = new address[](1);
+        yays[0] = c1;
+        uint256[] memory ids = new uint256[](2);
+        ids[0] = 1;
+        ids[1] = 2;
+        uint256[] memory opts = new uint256[](2);
+        opts[0] = 1;
+        opts[1] = 3;
+
+        // Flash loan protection
+        hevm.roll(block.number + 1);
+
+        hevm.warp(delegate.expiration() - 1);
+        assertTrue(block.timestamp < delegate.expiration());
+
+        bool ok;
+
+        // Lock will succeed before expiration
+        //delegate.doProxyLock(10 ether);
+        (ok,) = address(delegate).call(abi.encodeWithSignature("doProxyLock(uint256)",10 ether));
+        assertTrue(ok);
+        //delegate.doProxyVote(yays);
+        (ok,) = address(delegate).call(abi.encodeWithSignature("doProxyVote(address[])",yays));
+        assertTrue(ok);
+        (ok,) = address(delegate).call(abi.encodeWithSignature("doProxyVotePoll(uint256[],uint256[])",ids,opts));
+        assertTrue(ok);
+        assertEq(gov.balanceOf(address(delegate)), 90 ether);
+        assertEq(gov.balanceOf(address(chief)), currMKR + 10 ether);
+        assertEq(iou.balanceOf(address(delegate)), 10 ether);
+        assertEq(proxy.stake(address(delegate)), 10 ether);
+
+
+        // Lock will fail at expiration
+        hevm.warp(delegate.expiration());
+        assertTrue(block.timestamp == delegate.expiration());
+
+        (ok,) = address(delegate).call(abi.encodeWithSignature("doProxyLock(uint256)",10 ether));
+        assertTrue(!ok);
+        (ok,) = address(delegate).call(abi.encodeWithSignature("doProxyVote(address[])",yays));
+        assertTrue(!ok);
+        (ok,) = address(delegate).call(abi.encodeWithSignature("doProxyVotePoll(uint256[],uint256[])",ids,opts));
+        assertTrue(!ok);
+
+        assertEq(gov.balanceOf(address(delegate)), 90 ether);
+        assertEq(gov.balanceOf(address(chief)), currMKR + 10 ether);
+        assertEq(iou.balanceOf(address(delegate)), 10 ether);
+        assertEq(proxy.stake(address(delegate)), 10 ether);
+
+
+        // Lock will fail after expiration
+        hevm.warp(delegate.expiration() + 1);
+        assertTrue(block.timestamp > delegate.expiration());
+
+        (ok,) = address(delegate).call(abi.encodeWithSignature("doProxyLock(uint256)",10 ether));
+        assertTrue(!ok);
+        (ok,) = address(delegate).call(abi.encodeWithSignature("doProxyVote(address[])",yays));
+        assertTrue(!ok);
+        (ok,) = address(delegate).call(abi.encodeWithSignature("doProxyVotePoll(uint256[],uint256[])",ids,opts));
+        assertTrue(!ok);
+
+        assertEq(gov.balanceOf(address(delegate)), 90 ether);
+        assertEq(gov.balanceOf(address(chief)), currMKR + 10 ether);
+        assertEq(iou.balanceOf(address(delegate)), 10 ether);
+        assertEq(proxy.stake(address(delegate)), 10 ether);
+
+
+        hevm.roll(block.number + 1);
+        // Always allow freeing after expiration
+        delegate.doProxyFree(10 ether);
         assertEq(gov.balanceOf(address(delegate)), 100 ether);
         assertEq(gov.balanceOf(address(chief)), currMKR);
         assertEq(iou.balanceOf(address(delegate)), 0);
@@ -248,6 +382,32 @@ contract VoteDelegateTest is DSTest {
         assertEq(proxy.stake(address(delegator2)), 0);
     }
 
+    function test_delegator_lock_free_after_expiration() public {
+        uint256 currMKR = gov.balanceOf(address(chief));
+
+        delegator1.approveGov(address(proxy));
+        delegator1.approveIou(address(proxy));
+
+        delegator1.doProxyLock(10_000 ether);
+        assertEq(gov.balanceOf(address(delegator1)), 0);
+        assertEq(gov.balanceOf(address(chief)), currMKR + 10_000 ether);
+        assertEq(iou.balanceOf(address(delegator1)), 10_000 ether);
+        assertEq(proxy.stake(address(delegator1)), 10_000 ether);
+
+        hevm.roll(block.number + 1);
+
+        // Warp past expiration
+        hevm.warp(block.timestamp + 9001 days);
+        assertTrue(block.timestamp > delegate.expiration());
+
+        // Always allow freeing after expiration.
+        delegator1.doProxyFree(10_000 ether);
+        assertEq(gov.balanceOf(address(delegator1)), 10_000 ether);
+        assertEq(gov.balanceOf(address(chief)), currMKR);
+        assertEq(iou.balanceOf(address(delegator1)), 0);
+        assertEq(proxy.stake(address(delegator1)), 0);
+    }
+
     function test_delegate_voting() public {
         uint256 currMKR = gov.balanceOf(address(chief));
 
@@ -289,6 +449,33 @@ contract VoteDelegateTest is DSTest {
         opts[1] = 3;
         delegate.doProxyVotePoll(ids, opts);
         delegate.doProxyWithdrawPoll(ids);
+    }
+
+
+    function testFail_delegate_voting_after_expiration() public {
+        uint256 currMKR = gov.balanceOf(address(chief));
+
+        delegate.approveGov(address(proxy));
+        delegate.approveIou(address(proxy));
+        delegator1.approveGov(address(proxy));
+        delegator1.approveIou(address(proxy));
+
+        delegate.doProxyLock(100 ether);
+        delegator1.doProxyLock(10_000 ether);
+
+        assertEq(gov.balanceOf(address(chief)), currMKR + 10_100 ether);
+
+        address[] memory yays = new address[](1);
+        yays[0] = c1;
+
+        hevm.roll(block.number + 1);
+
+        // Warp past expiration
+        hevm.warp(block.timestamp + 9001 days);
+        assertTrue(block.timestamp > delegate.expiration());
+
+        // Fail here after expiration
+        delegate.doProxyVote(yays);
     }
 
     function test_delegate_voting_fuzz(uint256 wad_seed, uint256 wad2_seed) public {
