@@ -119,16 +119,8 @@ contract Voter {
         proxy.votePoll(pollId, optionId);
     }
 
-    function doProxyWithdrawPoll(uint256 pollId) public {
-        proxy.withdrawPoll(pollId);
-    }
-
     function doProxyVotePoll(uint256[] calldata pollIds, uint256[] calldata optionIds) public {
         proxy.votePoll(pollIds, optionIds);
-    }
-
-    function doProxyWithdrawPoll(uint256[] calldata pollIds) public {
-        proxy.withdrawPoll(pollIds);
     }
 }
 
@@ -439,7 +431,6 @@ contract VoteDelegateTest is DSTest {
         // but at least we can check it doesn't revert
 
         delegate.doProxyVotePoll(1, 1);
-        delegate.doProxyWithdrawPoll(1);
 
         uint256[] memory ids = new uint256[](2);
         ids[0] = 1;
@@ -448,7 +439,6 @@ contract VoteDelegateTest is DSTest {
         opts[0] = 1;
         opts[1] = 3;
         delegate.doProxyVotePoll(ids, opts);
-        delegate.doProxyWithdrawPoll(ids);
     }
 
 
@@ -561,10 +551,6 @@ contract VoteDelegateTest is DSTest {
         delegator2.doProxyVotePoll(1, 1);
     }
 
-    function testFail_non_delegate_attempts_polling_withdraw() public {
-        delegator2.doProxyWithdrawPoll(1);
-    }
-
     function testFail_non_delegate_attempts_polling_vote_multiple() public {
         uint256[] memory ids = new uint256[](2);
         ids[0] = 1;
@@ -573,12 +559,5 @@ contract VoteDelegateTest is DSTest {
         opts[0] = 1;
         opts[1] = 3;
         delegator2.doProxyVotePoll(ids, opts);
-    }
-
-    function testFail_non_delegate_attempts_polling_withdraw_multiple() public {
-        uint256[] memory ids = new uint256[](2);
-        ids[0] = 1;
-        ids[1] = 2;
-        delegator2.doProxyWithdrawPoll(ids);
     }
 }
