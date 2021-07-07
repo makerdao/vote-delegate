@@ -112,15 +112,7 @@ contract VoteDelegate {
         polling.vote(pollId, optionId);
     }
 
-    function withdrawPoll(uint256 pollId) external delegate_auth live {
-        polling.withdrawPoll(pollId);
-    }
-
     function votePoll(uint256[] calldata pollIds, uint256[] calldata optionIds) external delegate_auth live {
         polling.vote(pollIds, optionIds);
-    }
-
-    function withdrawPoll(uint256[] calldata pollIds) external delegate_auth live {
-        polling.withdrawPoll(pollIds);
     }
 }
