@@ -79,40 +79,64 @@ contract VoteDelegate {
         _;
     }
 
-    function lock(uint256 wad) external live {
+    function lock(uint256 wad) external {
+        lock(chief, wad);
+    }
+
+    function lock(ChiefLike _chief, uint256 wad) public live {
         stake[msg.sender] = add(stake[msg.sender], wad);
         gov.pull(msg.sender, wad);
-        chief.lock(wad);
+        _chief.lock(wad);
         iou.push(msg.sender, wad);
 
         emit Lock(msg.sender, wad);
     }
 
     function free(uint256 wad) external {
+        free(chief, wad);
+    }
+
+    function free(ChiefLike _chief, uint256 wad) public {
         require(stake[msg.sender] >= wad, "VoteDelegate/insufficient-stake");
 
         stake[msg.sender] -= wad;
         iou.pull(msg.sender, wad);
-        chief.free(wad);
+        _chief.free(wad);
         gov.push(msg.sender, wad);
 
         emit Free(msg.sender, wad);
     }
 
-    function vote(address[] memory yays) external delegate_auth live returns (bytes32 result) {
-        result = chief.vote(yays);
+    function vote(address[] memory yays) external returns (bytes32 result) {
+        return vote(chief, yays);
     }
 
-    function vote(bytes32 slate) external delegate_auth live {
-        chief.vote(slate);
+    function vote(ChiefLike _chief, address[] memory yays) public delegate_auth live returns (bytes32 result) {
+        result = _chief.vote(yays);
+    }
+
+    function vote(bytes32 slate) external {
+        vote(chief, slate);
+    }
+
+    function vote(ChiefLike _chief, bytes32 slate) public delegate_auth live {
+        _chief.vote(slate);
     }
 
     // Polling vote
-    function votePoll(uint256 pollId, uint256 optionId) external delegate_auth live {
-        polling.vote(pollId, optionId);
+    function votePoll(uint256 pollId, uint256 optionId) external {
+        votePoll(polling, pollId, optionId);
     }
 
-    function votePoll(uint256[] calldata pollIds, uint256[] calldata optionIds) external delegate_auth live {
-        polling.vote(pollIds, optionIds);
+    function votePoll(PollingLike _polling, uint256 pollId, uint256 optionId) public delegate_auth live {
+        _polling.vote(pollId, optionId);
+    }
+
+    function votePoll(uint256[] calldata pollIds, uint256[] calldata optionIds) external {
+        votePoll(polling, pollIds, optionIds);
+    }
+
+    function votePoll(PollingLike _polling, uint256[] calldata pollIds, uint256[] calldata optionIds) public delegate_auth live {
+        _polling.vote(pollIds, optionIds);
     }
 }
