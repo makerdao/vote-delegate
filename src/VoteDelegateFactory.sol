@@ -16,14 +16,14 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 // VoteDelegateFactory - create and keep record of delegats
-pragma solidity 0.6.12;
+pragma solidity >=0.6.12;
 
 import "./VoteDelegate.sol";
 
 contract VoteDelegateFactory {
     address public immutable chief;
     address public immutable polling;
-    mapping(address => address) public delegates;
+    mapping(address => address[]) public delegates;
 
     event CreateVoteDelegate(
         address indexed delegate,
@@ -36,14 +36,48 @@ contract VoteDelegateFactory {
     }
 
     function isDelegate(address guy) public view returns (bool) {
-        return delegates[guy] != address(0);
+        return delegates[guy].length != 0;
     }
 
-    function create() external returns (address voteDelegate) {
-        require(!isDelegate(msg.sender), "VoteDelegateFactory/sender-is-already-delegate");
+    function create(
+        bool _isDelegatorBypassEnabled,
+        uint8 _emergencyUnlockBurnPercent,
+        uint256 _lockupPeriod
+    ) external returns (address voteDelegate) {
+        bool duplicate = isDuplicate(msg.sender, _isDelegatorBypassEnabled, _emergencyUnlockBurnPercent, _lockupPeriod);
+        require(duplicate, "VoteDelegateFactory/sender-is-already-delegate");
 
-        voteDelegate = address(new VoteDelegate(chief, polling, msg.sender));
-        delegates[msg.sender] = voteDelegate;
+        voteDelegate = address(new VoteDelegate(
+            chief, 
+            polling, 
+            msg.sender, 
+            _isDelegatorBypassEnabled, 
+            _emergencyUnlockBurnPercent, 
+            _lockupPeriod
+        ));
+        delegates[msg.sender].push(voteDelegate);
         emit CreateVoteDelegate(msg.sender, voteDelegate);
+    }
+
+    function isDuplicate(
+        address guy, 
+        bool _isDelegatorBypassEnabled,
+        uint8 _emergencyUnlockBurnPercent,
+        uint256 _lockupPeriod
+    ) public view returns (bool) {
+        if (!isDelegate(guy)) {
+            return true;
+        }
+        address[] storage delegateContracts = delegates[guy];
+        for (uint i = 0; i < delegateContracts.length; ++i) {
+            VoteDelegate instance = VoteDelegate(delegateContracts[i]);
+            bool paramsEq = instance.emergencyUnlockBurnPercent() == _emergencyUnlockBurnPercent &&
+                    instance.isDelegatorBypassEnabled() == _isDelegatorBypassEnabled &&
+                    instance.lockupPeriod() == _lockupPeriod;
+            if (!paramsEq) {
+                return true;
+            }
+        }
+        return false;
     }
 }

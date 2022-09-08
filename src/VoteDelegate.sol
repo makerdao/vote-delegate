@@ -16,12 +16,15 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 // VoteDelegate - delegate your vote
-pragma solidity 0.6.12;
+pragma solidity >=0.6.12;
 
 interface TokenLike {
     function approve(address, uint256) external returns (bool);
     function pull(address, uint256) external;
     function push(address, uint256) external;
+
+    // todo: can we require the token have this burn capability? If not, what are alternatives?
+    function burn(uint256) external;
 }
 
 interface ChiefLike {
@@ -49,14 +52,33 @@ contract VoteDelegate {
     PollingLike public immutable polling;
     uint256     public immutable expiration;
 
+    // new
+    mapping(address => uint256) public principalToUnlockTime;
+    bool        public immutable isDelegatorBypassEnabled;
+    uint8       public immutable emergencyUnlockBurnPercent;
+    uint256     public immutable lockupPeriod;
+
     event Lock(address indexed usr, uint256 wad);
     event Free(address indexed usr, uint256 wad);
+    event UnlockBlockTime(address indexed usr, uint256 unlockTime);
 
-    constructor(address _chief, address _polling, address _delegate) public {
+    constructor(
+        address _chief,
+        address _polling,
+        address _delegate,
+        bool _isDelegatorBypassEnabled,
+        uint8 _emergencyUnlockBurnPercent,
+        uint256 _lockupPeriod
+    ) {
         chief = ChiefLike(_chief);
         polling = PollingLike(_polling);
         delegate = _delegate;
         expiration = block.timestamp + 365 days;
+
+        require(_emergencyUnlockBurnPercent <= 100, "VoteDelegate/emergency-unlock-burn-percent-over-100");
+        isDelegatorBypassEnabled = _isDelegatorBypassEnabled;
+        emergencyUnlockBurnPercent = _emergencyUnlockBurnPercent;
+        lockupPeriod = _lockupPeriod;
 
         TokenLike _gov = gov = ChiefLike(_chief).GOV();
         TokenLike _iou = iou = ChiefLike(_chief).IOU();
@@ -67,6 +89,10 @@ contract VoteDelegate {
 
     function add(uint256 x, uint256 y) internal pure returns (uint256 z) {
         require((z = x + y) >= x, "VoteDelegate/add-overflow");
+    }
+
+    function mul(uint256 x, uint256 y) internal pure returns (uint256 z) {
+        require(y == 0 || (z = x * y) / y == x, "VoteDelegate/mul-overflow");
     }
 
     modifier delegate_auth() {
@@ -88,15 +114,65 @@ contract VoteDelegate {
         emit Lock(msg.sender, wad);
     }
 
-    function free(uint256 wad) external {
+    function _setUnlock(address principal, uint256 unlockTime) internal {
+        principalToUnlockTime[principal] = unlockTime;
+        emit UnlockBlockTime(principal, unlockTime);
+    }
+
+    function initiateUnlock() external {
+        require(
+            stake[msg.sender] > 0,
+            "VoteDelegate/must-have-stake-to-initiate-free"
+        );
+        _setUnlock(msg.sender, block.timestamp + lockupPeriod);
+    }
+
+    function delegatorBypassLockup(address principal) external delegate_auth {
+        require(
+            isDelegatorBypassEnabled,
+            "VoteDelegate/delegator-bypass-not-enabled"
+        );
+        require(
+            stake[principal] > 0,
+            "VoteDelegate/must-have-stake-to-initiate-free"
+        );
+        _setUnlock(principal, block.timestamp);
+    }
+
+    function emergencyFree(uint256 wad) external {
+        require(
+            stake[msg.sender] > 0,
+            "VoteDelegate/must-have-stake-to-initiate-free"
+        );
+        _setUnlock(msg.sender, block.timestamp);
+        free(wad, true);
+    }
+
+    function free(uint256 wad, bool shouldBurn) internal {
         require(stake[msg.sender] >= wad, "VoteDelegate/insufficient-stake");
+        uint256 unlockTime = principalToUnlockTime[msg.sender];
+        require(
+            unlockTime > 0 && unlockTime <= block.timestamp,
+            "VoteDelegate/cannot-free-within-lockup"
+        );
+
+        uint8 burnPercent = 0;
+        if (shouldBurn) {
+            burnPercent = emergencyUnlockBurnPercent;
+        }
 
         stake[msg.sender] -= wad;
         iou.pull(msg.sender, wad);
         chief.free(wad);
-        gov.push(msg.sender, wad);
+        gov.push(msg.sender, mul(wad, 100 - burnPercent) / 100);
+        gov.burn(mul(wad, burnPercent) / 100);
 
+        delete principalToUnlockTime[msg.sender];
         emit Free(msg.sender, wad);
+    }
+
+    function free(uint256 wad) external {
+        free(wad, false);
     }
 
     function vote(address[] memory yays) external delegate_auth live returns (bytes32 result) {
