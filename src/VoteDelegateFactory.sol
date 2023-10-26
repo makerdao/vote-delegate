@@ -1,7 +1,6 @@
+// SPDX-FileCopyrightText: © 2023 Dai Foundation <www.daifoundation.org>
 // SPDX-License-Identifier: AGPL-3.0-or-later
-
-// Copyright (C) 2021 Dai Foundation
-
+//
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
@@ -15,35 +14,48 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-// VoteDelegateFactory - create and keep record of delegats
-pragma solidity 0.6.12;
+pragma solidity ^0.8.16;
 
-import "./VoteDelegate.sol";
+import {VoteDelegate} from "src/VoteDelegate.sol";
 
 contract VoteDelegateFactory {
-    address public immutable chief;
-    address public immutable polling;
-    mapping(address => address) public delegates;
+    // --- storage variables ---
 
-    event CreateVoteDelegate(
-        address indexed delegate,
-        address indexed voteDelegate
-    );
+    mapping(address => uint256) public created;
 
-    constructor(address _chief, address _polling) public {
+    // --- immutables ---
+
+    address immutable public chief;
+    address immutable public polling;
+
+    // --- constructor ---
+
+    constructor(address _chief, address _polling) {
         chief = _chief;
         polling = _polling;
     }
 
-    function isDelegate(address guy) public view returns (bool) {
-        return delegates[guy] != address(0);
+    function getAddress(address usr) public view returns (address delegate) {
+        uint256 salt = uint256(keccak256(abi.encode(usr)));
+        bytes32 codeHash = keccak256(abi.encodePacked(type(VoteDelegate).creationCode, abi.encode(chief, polling, usr)));
+        delegate = address(uint160(uint256(
+            keccak256(
+                abi.encodePacked(bytes1(0xff), address(this), salt, codeHash)
+            )
+        )));
     }
 
-    function create() external returns (address voteDelegate) {
-        require(!isDelegate(msg.sender), "VoteDelegateFactory/sender-is-already-delegate");
+    function isDelegate(address usr) external view returns (uint256 ok) {
+        ok = created[getAddress(usr)];
+    }
 
-        voteDelegate = address(new VoteDelegate(chief, polling, msg.sender));
-        delegates[msg.sender] = voteDelegate;
-        emit CreateVoteDelegate(msg.sender, voteDelegate);
+    function create() external returns (address delegate) {
+        uint256 salt = uint256(keccak256(abi.encode(msg.sender)));
+        bytes memory code = abi.encodePacked(type(VoteDelegate).creationCode, abi.encode(chief, polling, msg.sender));
+        assembly {
+            delegate := create2(0, add(code, 0x20), mload(code), salt)
+        }
+        require(delegate != address(0), "VoteDelegateFactory/creation-failed");
+        created[delegate] = 1;
     }
 }

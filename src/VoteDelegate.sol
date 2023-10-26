@@ -1,7 +1,6 @@
+// SPDX-FileCopyrightText: © 2023 Dai Foundation <www.daifoundation.org>
 // SPDX-License-Identifier: AGPL-3.0-or-later
-
-// Copyright (C) 2021 Dai Foundation
-
+//
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
@@ -15,18 +14,18 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-// VoteDelegate - delegate your vote
-pragma solidity 0.6.12;
+pragma solidity ^0.8.16;
 
-interface TokenLike {
+interface GemLike {
     function approve(address, uint256) external returns (bool);
-    function pull(address, uint256) external;
-    function push(address, uint256) external;
+    function transfer(address, uint256) external;
+    function transferFrom(address, address, uint256) external;
 }
 
 interface ChiefLike {
-    function GOV() external view returns (TokenLike);
-    function IOU() external view returns (TokenLike);
+    // function gov() external view returns (GemLike); // TODO: UNCOMMENT WITH NEW CHIEF
+    function GOV() external view returns (GemLike); // TODO: REMOVE WITH NEW CHIEF
+    function IOU() external view returns (GemLike); // TODO: REMOVE WITH NEW CHIEF
     function lock(uint256) external;
     function free(uint256) external;
     function vote(address[] calldata) external returns (bytes32);
@@ -41,49 +40,49 @@ interface PollingLike {
 }
 
 contract VoteDelegate {
+    // --- storage variables ---
+
     mapping(address => uint256) public stake;
-    address     public immutable delegate;
-    TokenLike   public immutable gov;
-    TokenLike   public immutable iou;
-    ChiefLike   public immutable chief;
-    PollingLike public immutable polling;
-    uint256     public immutable expiration;
+
+    // --- immutables ---
+
+    address     immutable public delegate;
+    GemLike     immutable public gov;
+    ChiefLike   immutable public chief;
+    PollingLike immutable public polling;
+
+    // --- events ---
 
     event Lock(address indexed usr, uint256 wad);
     event Free(address indexed usr, uint256 wad);
 
-    constructor(address _chief, address _polling, address _delegate) public {
-        chief = ChiefLike(_chief);
-        polling = PollingLike(_polling);
-        delegate = _delegate;
-        expiration = block.timestamp + 365 days;
+    // --- constructor ---
 
-        TokenLike _gov = gov = ChiefLike(_chief).GOV();
-        TokenLike _iou = iou = ChiefLike(_chief).IOU();
+    constructor(address chief_, address polling_, address delegate_) {
+        chief = ChiefLike(chief_);
+        polling = PollingLike(polling_);
+        delegate = delegate_;
 
-        _gov.approve(_chief, type(uint256).max);
-        _iou.approve(_chief, type(uint256).max);
+        // gov = ChiefLike(chief_).gov(); // TODO: UNCOMMENT WITH NEW CHIEF
+        gov = ChiefLike(chief_).GOV(); // TODO: REMOVE WITH NEW CHIEF
+
+        gov.approve(chief_, type(uint256).max);
+        ChiefLike(chief_).IOU().approve(chief_, type(uint256).max); // TODO: REMOVE WITH NEW CHIEF
     }
 
-    function add(uint256 x, uint256 y) internal pure returns (uint256 z) {
-        require((z = x + y) >= x, "VoteDelegate/add-overflow");
-    }
+    // --- modifiers ---
 
     modifier delegate_auth() {
         require(msg.sender == delegate, "VoteDelegate/sender-not-delegate");
         _;
     }
 
-    modifier live() {
-        require(block.timestamp < expiration, "VoteDelegate/delegation-contract-expired");
-        _;
-    }
+    // --- NGT owner functions
 
-    function lock(uint256 wad) external live {
-        stake[msg.sender] = add(stake[msg.sender], wad);
-        gov.pull(msg.sender, wad);
+    function lock(uint256 wad) external {
+        stake[msg.sender] = stake[msg.sender] + wad;
+        gov.transferFrom(msg.sender, address(this), wad);
         chief.lock(wad);
-        iou.push(msg.sender, wad);
 
         emit Lock(msg.sender, wad);
     }
@@ -92,27 +91,29 @@ contract VoteDelegate {
         require(stake[msg.sender] >= wad, "VoteDelegate/insufficient-stake");
 
         stake[msg.sender] -= wad;
-        iou.pull(msg.sender, wad);
         chief.free(wad);
-        gov.push(msg.sender, wad);
+        gov.transfer(msg.sender, wad);
 
         emit Free(msg.sender, wad);
     }
 
-    function vote(address[] memory yays) external delegate_auth live returns (bytes32 result) {
+    // --- delegate executive voting functions
+
+    function vote(address[] memory yays) external delegate_auth returns (bytes32 result) {
         result = chief.vote(yays);
     }
 
-    function vote(bytes32 slate) external delegate_auth live {
+    function vote(bytes32 slate) external delegate_auth {
         chief.vote(slate);
     }
 
-    // Polling vote
-    function votePoll(uint256 pollId, uint256 optionId) external delegate_auth live {
+    // --- delegate poll voting functions
+
+    function votePoll(uint256 pollId, uint256 optionId) external delegate_auth {
         polling.vote(pollId, optionId);
     }
 
-    function votePoll(uint256[] calldata pollIds, uint256[] calldata optionIds) external delegate_auth live {
+    function votePoll(uint256[] calldata pollIds, uint256[] calldata optionIds) external delegate_auth {
         polling.vote(pollIds, optionIds);
     }
 }
