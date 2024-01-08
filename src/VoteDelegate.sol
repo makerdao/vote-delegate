@@ -25,6 +25,7 @@ interface GemLike {
 interface ChiefLike {
     function GOV() external view returns (GemLike);
     function IOU() external view returns (GemLike);
+    function last(address) external view returns (uint256);
     function lock(uint256) external;
     function free(uint256) external;
     function vote(address[] calldata) external returns (bytes32);
@@ -78,6 +79,9 @@ contract VoteDelegate {
     // --- NGT owner functions
 
     function lock(uint256 wad) external {
+        uint256 last = chief.last(address(this));
+        // To avoid withdrawals been blocked by deposits, there is a time window when only they can happen
+        require(block.number == last || block.number > last + 5, "VoteDelegate/exclusive-withdrawal-window");
         stake[msg.sender] = stake[msg.sender] + wad;
         gov.transferFrom(msg.sender, address(this), wad);
         chief.lock(wad);

@@ -78,26 +78,42 @@ contract VoteDelegateTest is DssTest {
         vm.stopPrank();
     }
 
-    function testProxyLockFree() public {
-        uint256 initialMKR = gov.balanceOf(address(chief));
+    function testDelegateLockFree() public {
+        uint256 currMKR = gov.balanceOf(address(chief));
 
         vm.prank(delegate); gov.approve(address(proxy), type(uint256).max);
 
         assertEq(gov.balanceOf(address(delegate)), 100 ether);
 
-        vm.prank(delegate); proxy.lock(100 ether);
+        vm.prank(delegate); proxy.lock(50 ether);
+        vm.prank(delegate); proxy.lock(50 ether);
         assertEq(gov.balanceOf(address(delegate)), 0);
-        assertEq(gov.balanceOf(address(chief)), initialMKR + 100 ether);
+        assertEq(gov.balanceOf(address(chief)), currMKR + 100 ether);
         assertEq(proxy.stake(address(delegate)), 100 ether);
 
         // Comply with Chief's flash loan protection
         vm.roll(block.number + 1);
         vm.warp(block.timestamp + 1);
 
+        gov.mint(address(delegate), 1);
+        vm.expectRevert("VoteDelegate/exclusive-withdrawal-window");
+        vm.prank(delegate); proxy.lock(1);
+
         vm.prank(delegate); proxy.free(100 ether);
-        assertEq(gov.balanceOf(address(delegate)), 100 ether);
-        assertEq(gov.balanceOf(address(chief)), initialMKR);
+        assertEq(gov.balanceOf(address(delegate)), 100 ether + 1);
+        assertEq(gov.balanceOf(address(chief)), currMKR);
         assertEq(proxy.stake(address(delegate)), 0);
+
+        vm.roll(block.number + 4);
+        vm.warp(block.timestamp + 4);
+
+        vm.expectRevert("VoteDelegate/exclusive-withdrawal-window");
+        vm.prank(delegate); proxy.lock(1);
+
+        vm.roll(block.number + 1);
+        vm.warp(block.timestamp + 1);
+
+        vm.prank(delegate); proxy.lock(1);
     }
 
     function testDelegatorLockFree() public {
@@ -105,18 +121,35 @@ contract VoteDelegateTest is DssTest {
 
         vm.prank(delegator1); gov.approve(address(proxy), type(uint256).max);
 
-        vm.prank(delegator1); proxy.lock(10_000 ether);
+        vm.prank(delegator1); proxy.lock(5_000 ether);
+        vm.prank(delegator1); proxy.lock(5_000 ether);
         assertEq(gov.balanceOf(address(delegator1)), 0);
         assertEq(gov.balanceOf(address(chief)), currMKR + 10_000 ether);
         assertEq(proxy.stake(address(delegator1)), 10_000 ether);
 
         // Comply with Chief's flash loan protection
         vm.roll(block.number + 1);
+        vm.warp(block.timestamp + 1);
+
+        gov.mint(address(delegator1), 1);
+        vm.expectRevert("VoteDelegate/exclusive-withdrawal-window");
+        vm.prank(delegator1); proxy.lock(1);
 
         vm.prank(delegator1); proxy.free(10_000 ether);
-        assertEq(gov.balanceOf(address(delegator1)), 10_000 ether);
+        assertEq(gov.balanceOf(address(delegator1)), 10_000 ether + 1);
         assertEq(gov.balanceOf(address(chief)), currMKR);
         assertEq(proxy.stake(address(delegator1)), 0);
+
+        vm.roll(block.number + 4);
+        vm.warp(block.timestamp + 4);
+
+        vm.expectRevert("VoteDelegate/exclusive-withdrawal-window");
+        vm.prank(delegator1); proxy.lock(1);
+
+        vm.roll(block.number + 1);
+        vm.warp(block.timestamp + 1);
+
+        vm.prank(delegator1); proxy.lock(1);
     }
 
     function testDelegatorLockFreeFuzz(uint256 wad_seed) public {
