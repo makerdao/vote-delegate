@@ -23,9 +23,8 @@ interface GemLike {
 }
 
 interface ChiefLike {
-    // function gov() external view returns (GemLike); // TODO: UNCOMMENT WITH NEW CHIEF
-    function GOV() external view returns (GemLike); // TODO: REMOVE WITH NEW CHIEF
-    function IOU() external view returns (GemLike); // TODO: REMOVE WITH NEW CHIEF
+    function GOV() external view returns (GemLike);
+    function IOU() external view returns (GemLike);
     function lock(uint256) external;
     function free(uint256) external;
     function vote(address[] calldata) external returns (bytes32);
@@ -63,11 +62,10 @@ contract VoteDelegate {
         polling = PollingLike(polling_);
         delegate = delegate_;
 
-        // gov = ChiefLike(chief_).gov(); // TODO: UNCOMMENT WITH NEW CHIEF
-        gov = ChiefLike(chief_).GOV(); // TODO: REMOVE WITH NEW CHIEF
+        gov = ChiefLike(chief_).GOV();
 
         gov.approve(chief_, type(uint256).max);
-        ChiefLike(chief_).IOU().approve(chief_, type(uint256).max); // TODO: REMOVE WITH NEW CHIEF
+        ChiefLike(chief_).IOU().approve(chief_, type(uint256).max);
     }
 
     // --- modifiers ---

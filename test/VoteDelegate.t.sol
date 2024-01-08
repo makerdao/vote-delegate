@@ -50,8 +50,7 @@ contract VoteDelegateTest is DssTest {
 
         chief = ChiefExtendedLike(0x0a3f6849f78076aefaDf113F5BED87720274dDC0);
         polling = PollingLike(0xD3A9FE267852281a1e6307a1C37CDfD76d39b133);
-        // gov = GemLikeExtended(address(chief.gov())); // TODO: UNCOMMENT WITH NEW CHIEF
-        gov = GemLikeExtended(address(chief.GOV())); // TODO: REMOVE WITH NEW CHIEF
+        gov = GemLikeExtended(address(chief.GOV()));
 
         // Give us admin access to mint MKR
         vm.store(
