@@ -53,7 +53,7 @@ contract VoteDelegate {
 
     // --- constants ---
 
-    uint256 public constant HATCH_SIZE     = 3;
+    uint256 public constant HATCH_SIZE     = 5;
     uint256 public constant HATCH_COOLDOWN = 5;
 
     // --- events ---

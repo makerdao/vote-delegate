@@ -164,8 +164,8 @@ contract VoteDelegateTest is DssTest {
         vm.prank(delegate); proxy.reserveHatch();
 
         // move to last block of the hatch
-        vm.roll(block.number + 2);
-        vm.warp(block.timestamp + 2);
+        vm.roll(block.number + 4);
+        vm.warp(block.timestamp + 4);
 
         vm.expectRevert("VoteDelegate/no-lock-during-hatch");
         vm.prank(delegate); proxy.lock(10 ether);              // can not lock
