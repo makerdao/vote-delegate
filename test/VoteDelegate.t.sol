@@ -148,11 +148,11 @@ contract VoteDelegateTest is DssTest {
         assertEq(proxy.hatchTrigger(), 0);
 
         vm.prank(delegate); proxy.lock(10 ether);              // can lock
-        vm.prank(delegate); proxy.reserveHatch();              // can reserve hatch
+        proxy.reserveHatch();                                  // can reserve hatch
         assertEq(proxy.hatchTrigger(), block.number);
         vm.prank(delegate); proxy.lock(10 ether);              // can still lock
         vm.expectRevert("VoteDelegate/cooldown-not-finished"); // can not reserve hatch again
-        vm.prank(delegate); proxy.reserveHatch();
+        proxy.reserveHatch();
 
         // move to first block of the hatch
         vm.roll(block.number + 1);
@@ -161,7 +161,7 @@ contract VoteDelegateTest is DssTest {
         vm.expectRevert("VoteDelegate/no-lock-during-hatch");
         vm.prank(delegate); proxy.lock(10 ether);              // can not lock
         vm.expectRevert("VoteDelegate/cooldown-not-finished"); // can not reserve hatch
-        vm.prank(delegate); proxy.reserveHatch();
+        proxy.reserveHatch();
 
         // move to last block of the hatch
         vm.roll(block.number + 4);
@@ -170,7 +170,7 @@ contract VoteDelegateTest is DssTest {
         vm.expectRevert("VoteDelegate/no-lock-during-hatch");
         vm.prank(delegate); proxy.lock(10 ether);              // can not lock
         vm.expectRevert("VoteDelegate/cooldown-not-finished"); // can not reserve hatch
-        vm.prank(delegate); proxy.reserveHatch();
+        proxy.reserveHatch();
 
         // move to first block of the cooldown
         vm.roll(block.number + 1);
@@ -178,7 +178,7 @@ contract VoteDelegateTest is DssTest {
 
         vm.prank(delegate); proxy.lock(10 ether);              // can lock again
         vm.expectRevert("VoteDelegate/cooldown-not-finished"); // can not reserve hatch
-        vm.prank(delegate); proxy.reserveHatch();
+        proxy.reserveHatch();
 
         // move to last block of the cooldown
         vm.roll(block.number + 4);
@@ -186,18 +186,18 @@ contract VoteDelegateTest is DssTest {
 
         vm.prank(delegate); proxy.lock(10 ether);              // can still lock
         vm.expectRevert("VoteDelegate/cooldown-not-finished"); // can not reserve hatch
-        vm.prank(delegate); proxy.reserveHatch();
+        proxy.reserveHatch();
 
         // move to first block after the cooldown
         vm.roll(block.number + 1);
         vm.warp(block.timestamp + 1);
 
         vm.prank(delegate); proxy.lock(10 ether);              // can lock
-        vm.prank(delegate); proxy.reserveHatch();              // can reserve hatch again
+        proxy.reserveHatch();                                  // can reserve hatch again
         assertEq(proxy.hatchTrigger(), block.number);
         vm.prank(delegate); proxy.lock(10 ether);              // can still lock
         vm.expectRevert("VoteDelegate/cooldown-not-finished"); // can not reserve hatch again
-        vm.prank(delegate); proxy.reserveHatch();
+        proxy.reserveHatch();
 
         // move to first block of the new hatch
         vm.roll(block.number + 1);
@@ -206,7 +206,7 @@ contract VoteDelegateTest is DssTest {
         vm.expectRevert("VoteDelegate/no-lock-during-hatch");
         vm.prank(delegate); proxy.lock(10 ether);              // can not lock
         vm.expectRevert("VoteDelegate/cooldown-not-finished"); // can not reserve hatch
-        vm.prank(delegate); proxy.reserveHatch();
+        proxy.reserveHatch();
     }
 
     function testDelegateVoting() public {
