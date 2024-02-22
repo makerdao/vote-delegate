@@ -45,6 +45,8 @@ contract VoteDelegateTest is DssTest {
     address delegator1 = address(222);
     address delegator2 = address(333);
 
+    event ReserveHatch();
+
     function setUp() public {
         vm.createSelectFork(vm.envString("ETH_RPC_URL"));
 
@@ -148,6 +150,9 @@ contract VoteDelegateTest is DssTest {
         assertEq(proxy.hatchTrigger(), 0);
 
         vm.prank(delegate); proxy.lock(10 ether);              // can lock
+
+        vm.expectEmit(true, true, true, true);
+        emit ReserveHatch();
         proxy.reserveHatch();                                  // can reserve hatch
         assertEq(proxy.hatchTrigger(), block.number);
         vm.prank(delegate); proxy.lock(10 ether);              // can still lock

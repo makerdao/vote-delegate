@@ -60,6 +60,7 @@ contract VoteDelegate {
 
     event Lock(address indexed usr, uint256 wad);
     event Free(address indexed usr, uint256 wad);
+    event ReserveHatch();
 
     // --- constructor ---
 
@@ -107,6 +108,8 @@ contract VoteDelegate {
     function reserveHatch() external {
         require(block.number > hatchTrigger + HATCH_SIZE + HATCH_COOLDOWN, "VoteDelegate/cooldown-not-finished");
         hatchTrigger = block.number;
+
+        emit ReserveHatch();
     }
 
     // --- delegate executive voting functions
