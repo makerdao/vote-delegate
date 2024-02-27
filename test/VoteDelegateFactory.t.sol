@@ -21,8 +21,6 @@ import "dss-test/DssTest.sol";
 import "src/VoteDelegateFactory.sol";
 
 contract VoteDelegateFactoryTest is DssTest {
-    uint256 constant electionSize = 3;
-
     VoteDelegateFactory factory;
     address chief;
     address polling;
@@ -36,7 +34,7 @@ contract VoteDelegateFactoryTest is DssTest {
         factory = new VoteDelegateFactory(address(chief), address(polling));
     }
 
-    function test_constructor() public {
+    function testConstructor() public {
         assertEq(address(factory.chief()), address(chief));
         assertEq(address(factory.polling()), address(polling));
     }
@@ -45,18 +43,11 @@ contract VoteDelegateFactoryTest is DssTest {
         address proxy = factory.getAddress(address(1));
         assertEq(factory.created(proxy), 0);
         assertEq(factory.isDelegate(address(1)), 0);
-        vm.prank(address(1));
-        address proxy2 = factory.create();
-        assertEq(proxy2, proxy);
+        vm.prank(address(1)); address retAddr = factory.create();
+        assertEq(retAddr, proxy);
         assertEq(factory.created(proxy), 1);
         assertEq(factory.isDelegate(address(1)), 1);
-    }
-
-    function testRevertsCreateTwice() public {
-        vm.prank(address(1));
-        factory.create();
         vm.expectRevert();
-        vm.prank(address(1));
-        factory.create();
+        vm.prank(address(1)); factory.create();
     }
 }

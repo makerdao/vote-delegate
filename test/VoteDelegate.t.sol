@@ -68,13 +68,12 @@ contract VoteDelegateTest is DssTest {
     }
 
     function testConstructor() public {
-        VoteDelegate v = new VoteDelegate(address(chief), address(polling), address(delegate));
-        assertEq(address(v.chief()), address(chief));
-        assertEq(address(v.polling()), address(polling));
-        assertEq(v.delegate(), delegate);
-        assertEq(address(v.gov()), address(chief.GOV()));
-        assertEq(gov.allowance(address(v), address(chief)), type(uint256).max);
-        assertEq(GemLikeExtended(address(chief.IOU())).allowance(address(v), address(chief)), type(uint256).max);
+        assertEq(address(proxy.chief()), address(chief));
+        assertEq(address(proxy.polling()), address(polling));
+        assertEq(proxy.delegate(), delegate);
+        assertEq(address(proxy.gov()), address(chief.GOV()));
+        assertEq(gov.allowance(address(proxy), address(chief)), type(uint256).max);
+        assertEq(GemLikeExtended(address(chief.IOU())).allowance(address(proxy), address(chief)), type(uint256).max);
     }
 
     function testModifiers() public {
