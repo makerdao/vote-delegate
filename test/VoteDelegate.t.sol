@@ -47,6 +47,9 @@ contract VoteDelegateTest is DssTest {
     address delegator1 = address(222);
     address delegator2 = address(333);
 
+    event Lock(address indexed usr, uint256 wad);
+    event Free(address indexed usr, uint256 wad);
+
     function setUp() public {
         vm.createSelectFork(vm.envString("ETH_RPC_URL"));
 
@@ -93,6 +96,8 @@ contract VoteDelegateTest is DssTest {
 
         assertEq(gov.balanceOf(address(delegate)), 100 ether);
 
+        vm.expectEmit(true, true, true, true);
+        emit Lock(delegate, 100 ether);
         vm.prank(delegate); proxy.lock(100 ether);
         assertEq(gov.balanceOf(address(delegate)), 0);
         assertEq(gov.balanceOf(address(chief)), initialMKR + 100 ether);
@@ -102,6 +107,8 @@ contract VoteDelegateTest is DssTest {
         vm.roll(block.number + 1);
         vm.warp(block.timestamp + 1);
 
+        vm.expectEmit(true, true, true, true);
+        emit Free(delegate, 100 ether);
         vm.prank(delegate); proxy.free(100 ether);
         assertEq(gov.balanceOf(address(delegate)), 100 ether);
         assertEq(gov.balanceOf(address(chief)), initialMKR);
