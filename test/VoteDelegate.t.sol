@@ -25,6 +25,7 @@ interface ChiefExtendedLike is ChiefLike {
 }
 
 interface GemLikeExtended is GemLike {
+    function allowance(address, address) external view returns (uint256);
     function balanceOf(address) external view returns (uint256);
     function mint(address, uint256) external;
 }
@@ -61,6 +62,16 @@ contract VoteDelegateTest is DssTest {
         gov.mint(address(delegator2), 20_000 ether);
 
         proxy = new VoteDelegate(address(chief), address(polling), address(delegate));
+    }
+
+    function testConstructor() public {
+        VoteDelegate v = new VoteDelegate(address(chief), address(polling), address(delegate));
+        assertEq(address(v.chief()), address(chief));
+        assertEq(address(v.polling()), address(polling));
+        assertEq(v.delegate(), delegate);
+        assertEq(address(v.gov()), address(chief.GOV()));
+        assertEq(gov.allowance(address(v), address(chief)), type(uint256).max);
+        assertEq(GemLikeExtended(address(chief.IOU())).allowance(address(v), address(chief)), type(uint256).max);
     }
 
     function testModifiers() public {
