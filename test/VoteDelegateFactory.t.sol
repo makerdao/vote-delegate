@@ -56,7 +56,7 @@ contract VoteDelegateFactoryTest is DssTest {
     function testRevertsCreateTwice() public {
         vm.prank(address(1));
         factory.create();
-        vm.expectRevert("VoteDelegateFactory/creation-failed");
+        vm.expectRevert();
         vm.prank(address(1));
         factory.create();
     }

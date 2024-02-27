@@ -31,6 +31,8 @@ interface GemLikeExtended is GemLike {
 }
 
 contract VoteDelegateTest is DssTest {
+    using stdStorage for StdStorage;
+
     uint256 constant electionSize = 3;
     address constant c1 = address(0x1);
     address constant c2 = address(0x2);
@@ -53,11 +55,7 @@ contract VoteDelegateTest is DssTest {
         gov = GemLikeExtended(address(chief.GOV()));
 
         // Give us admin access to mint MKR
-        vm.store(
-            address(gov),
-            bytes32(uint256(4)),
-            bytes32(uint256(uint160(address(this))))
-        );
+        stdstore.target(address(gov)).sig("owner()").checked_write(address(this));
 
         gov.mint(address(delegate), 100 ether);
         gov.mint(address(delegator1), 10_000 ether);

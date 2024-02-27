@@ -50,12 +50,7 @@ contract VoteDelegateFactory {
     }
 
     function create() external returns (address delegate) {
-        uint256 salt = uint256(keccak256(abi.encode(msg.sender)));
-        bytes memory code = abi.encodePacked(type(VoteDelegate).creationCode, abi.encode(chief, polling, msg.sender));
-        assembly {
-            delegate := create2(0, add(code, 0x20), mload(code), salt)
-        }
-        require(delegate != address(0), "VoteDelegateFactory/creation-failed");
+        delegate = address(new VoteDelegate{salt: keccak256(abi.encode(msg.sender))}(chief, polling, msg.sender));
         created[delegate] = 1;
     }
 }
