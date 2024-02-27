@@ -78,17 +78,16 @@ contract VoteDelegate {
     // --- gov owner functions
 
     function lock(uint256 wad) external {
-        stake[msg.sender] = stake[msg.sender] + wad;
         gov.transferFrom(msg.sender, address(this), wad);
         chief.lock(wad);
+        stake[msg.sender] += wad;
 
         emit Lock(msg.sender, wad);
     }
 
     function free(uint256 wad) external {
         require(stake[msg.sender] >= wad, "VoteDelegate/insufficient-stake");
-
-        stake[msg.sender] -= wad;
+        unchecked { stake[msg.sender] -= wad; }
         chief.free(wad);
         gov.transfer(msg.sender, wad);
 
