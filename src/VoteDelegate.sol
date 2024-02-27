@@ -75,7 +75,7 @@ contract VoteDelegate {
         _;
     }
 
-    // --- NGT owner functions
+    // --- gov owner functions
 
     function lock(uint256 wad) external {
         stake[msg.sender] = stake[msg.sender] + wad;
