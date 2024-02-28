@@ -40,11 +40,10 @@ contract VoteDelegateFactory {
     }
 
     function getAddress(address usr) public view returns (address delegate) {
-        uint256 salt = uint256(keccak256(abi.encode(usr)));
         bytes32 codeHash = keccak256(abi.encodePacked(type(VoteDelegate).creationCode, abi.encode(chief, polling, usr)));
         delegate = address(uint160(uint256(
             keccak256(
-                abi.encodePacked(bytes1(0xff), address(this), salt, codeHash)
+                abi.encodePacked(bytes1(0xff), address(this), keccak256(abi.encode(usr)), codeHash)
             )
         )));
     }
