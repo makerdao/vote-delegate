@@ -28,6 +28,10 @@ contract VoteDelegateFactory {
     address immutable public chief;
     address immutable public polling;
 
+    // --- events ---
+
+    event CreateVoteDelegate(address indexed usr, address indexed voteDelegate);
+
     // --- constructor ---
 
     constructor(address _chief, address _polling) {
@@ -35,12 +39,11 @@ contract VoteDelegateFactory {
         polling = _polling;
     }
 
-    function getAddress(address usr) public view returns (address delegate) {
-        uint256 salt = uint256(keccak256(abi.encode(usr)));
+    function getAddress(address usr) public view returns (address voteDelegate) {
         bytes32 codeHash = keccak256(abi.encodePacked(type(VoteDelegate).creationCode, abi.encode(chief, polling, usr)));
-        delegate = address(uint160(uint256(
+        voteDelegate = address(uint160(uint256(
             keccak256(
-                abi.encodePacked(bytes1(0xff), address(this), salt, codeHash)
+                abi.encodePacked(bytes1(0xff), address(this), keccak256(abi.encode(usr)), codeHash)
             )
         )));
     }
@@ -49,8 +52,10 @@ contract VoteDelegateFactory {
         ok = created[getAddress(usr)];
     }
 
-    function create() external returns (address delegate) {
-        delegate = address(new VoteDelegate{salt: keccak256(abi.encode(msg.sender))}(chief, polling, msg.sender));
-        created[delegate] = 1;
+    function create() external returns (address voteDelegate) {
+        voteDelegate = address(new VoteDelegate{salt: keccak256(abi.encode(msg.sender))}(chief, polling, msg.sender));
+        created[voteDelegate] = 1;
+
+        emit CreateVoteDelegate(msg.sender, voteDelegate);
     }
 }

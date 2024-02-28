@@ -25,6 +25,8 @@ contract VoteDelegateFactoryTest is DssTest {
     address chief;
     address polling;
 
+    event CreateVoteDelegate(address indexed usr, address indexed voteDelegate);
+
     function setUp() public {
         vm.createSelectFork(vm.envString("ETH_RPC_URL"));
 
@@ -43,6 +45,8 @@ contract VoteDelegateFactoryTest is DssTest {
         address proxy = factory.getAddress(address(1));
         assertEq(factory.created(proxy), 0);
         assertEq(factory.isDelegate(address(1)), 0);
+        vm.expectEmit(true, true, true, true);
+        emit CreateVoteDelegate(address(1), proxy);
         vm.prank(address(1)); address retAddr = factory.create();
         assertEq(retAddr, proxy);
         assertEq(factory.created(proxy), 1);
