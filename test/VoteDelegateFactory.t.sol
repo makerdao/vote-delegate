@@ -25,7 +25,7 @@ contract VoteDelegateFactoryTest is DssTest {
     address chief;
     address polling;
 
-    event CreateVoteDelegate(address indexed usr, address delegate);
+    event CreateVoteDelegate(address indexed usr, address indexed delegate);
 
     function setUp() public {
         vm.createSelectFork(vm.envString("ETH_RPC_URL"));

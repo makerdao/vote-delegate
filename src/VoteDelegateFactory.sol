@@ -30,7 +30,7 @@ contract VoteDelegateFactory {
 
     // --- events ---
 
-    event CreateVoteDelegate(address indexed usr, address delegate);
+    event CreateVoteDelegate(address indexed usr, address indexed delegate);
 
     // --- constructor ---
 
