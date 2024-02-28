@@ -32,9 +32,7 @@ interface ChiefLike {
 }
 
 interface PollingLike {
-    function withdrawPoll(uint256) external;
     function vote(uint256, uint256) external;
-    function withdrawPoll(uint256[] calldata) external;
     function vote(uint256[] calldata, uint256[] calldata) external;
 }
 
