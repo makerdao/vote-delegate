@@ -28,6 +28,10 @@ contract VoteDelegateFactory {
     address immutable public chief;
     address immutable public polling;
 
+    // --- events ---
+
+    event CreateVoteDelegate(address indexed usr, address delegate);
+
     // --- constructor ---
 
     constructor(address _chief, address _polling) {
@@ -52,5 +56,7 @@ contract VoteDelegateFactory {
     function create() external returns (address delegate) {
         delegate = address(new VoteDelegate{salt: keccak256(abi.encode(msg.sender))}(chief, polling, msg.sender));
         created[delegate] = 1;
+
+        emit CreateVoteDelegate(msg.sender, delegate);
     }
 }
