@@ -45,6 +45,7 @@ contract VoteDelegateTest is DssTest {
 
     event Lock(address indexed usr, uint256 wad);
     event Free(address indexed usr, uint256 wad);
+    event Voted(address indexed voter, uint256 indexed pollId, uint256 indexed optionId);
 
     function setUp() public {
         vm.createSelectFork(vm.envString("ETH_RPC_URL"));
@@ -181,8 +182,10 @@ contract VoteDelegateTest is DssTest {
 
     function testDelegatePolling() public {
         // We can't test much as they are pure events
-        // but at least we can check it doesn't revert
+        // but at least we can check it doesn't revert and events are emitted
 
+        vm.expectEmit(true, true, true, true);
+        emit Voted(address(proxy), 1, 1);
         vm.prank(delegate); proxy.votePoll(1, 1);
 
         uint256[] memory ids = new uint256[](2);
@@ -191,6 +194,8 @@ contract VoteDelegateTest is DssTest {
         uint256[] memory opts = new uint256[](2);
         opts[0] = 1;
         opts[1] = 3;
+        vm.expectEmit(true, true, true, true);
+        emit Voted(address(proxy), 1, 1);
         vm.prank(delegate); proxy.votePoll(ids, opts);
     }
 
@@ -229,13 +234,10 @@ contract VoteDelegateTest is DssTest {
 
     function testRevertsDelegateAttemptsSteal() public {
         vm.prank(delegate); gov.approve(address(proxy), type(uint256).max);
-        vm.prank(delegator1); gov.approve(address(proxy), type(uint256).max);
-
         vm.prank(delegate); proxy.lock(100 ether);
-        vm.prank(delegator1); proxy.lock(10_000 ether);
 
         // Attempting to steal more MKR than you put in
-        vm.expectRevert();
+        vm.expectRevert("VoteDelegate/insufficient-stake");
         vm.prank(delegate); proxy.free(101 ether);
     }
 }
