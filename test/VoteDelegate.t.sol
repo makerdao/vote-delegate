@@ -234,10 +234,12 @@ contract VoteDelegateTest is DssTest {
 
     function testRevertsDelegateAttemptsSteal() public {
         vm.prank(delegate); gov.approve(address(proxy), type(uint256).max);
+        vm.prank(delegator1); gov.approve(address(proxy), type(uint256).max);
         vm.prank(delegate); proxy.lock(100 ether);
+        vm.prank(delegator1); proxy.lock(10_000 ether);
 
-        // Attempting to steal more MKR than you put in
+        // Attempting to take more MKR than assigned in the stake mapping (having a greater total)
         vm.expectRevert("VoteDelegate/insufficient-stake");
-        vm.prank(delegate); proxy.free(101 ether);
+        vm.prank(delegate); proxy.free(100 ether + 1);
     }
 }
