@@ -45,12 +45,14 @@ contract VoteDelegateFactoryTest is DssTest {
         address proxy = factory.getAddress(address(1));
         assertEq(factory.created(proxy), 0);
         assertEq(factory.isDelegate(address(1)), 0);
+        assertEq(factory.delegates(address(1)), address(0));
         vm.expectEmit(true, true, true, true);
         emit CreateVoteDelegate(address(1), proxy);
         vm.prank(address(1)); address retAddr = factory.create();
         assertEq(retAddr, proxy);
         assertEq(factory.created(proxy), 1);
         assertEq(factory.isDelegate(address(1)), 1);
+        assertEq(factory.delegates(address(1)), proxy);
         vm.expectRevert();
         vm.prank(address(1)); factory.create();
     }
