@@ -52,8 +52,8 @@ contract VoteDelegateFactory {
         ok = created[getAddress(usr)];
     }
 
+    // Getter that was present in the previous version
     function delegates(address usr) external view returns (address voteDelegate) {
-        // Getter that was present in the previous version
         voteDelegate = getAddress(usr);
         if (created[voteDelegate] == 0) { voteDelegate = address(0); }
     }
