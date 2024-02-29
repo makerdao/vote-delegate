@@ -52,6 +52,12 @@ contract VoteDelegateFactory {
         ok = created[getAddress(usr)];
     }
 
+    // Getter that was present in the previous version
+    function delegates(address usr) external view returns (address voteDelegate) {
+        voteDelegate = getAddress(usr);
+        if (created[voteDelegate] == 0) { voteDelegate = address(0); }
+    }
+
     function create() external returns (address voteDelegate) {
         voteDelegate = address(new VoteDelegate{salt: keccak256(abi.encode(msg.sender))}(chief, polling, msg.sender));
         created[voteDelegate] = 1;
