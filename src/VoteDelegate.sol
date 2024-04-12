@@ -40,6 +40,7 @@ contract VoteDelegate {
     // --- storage variables ---
 
     mapping(address => uint256) public stake;
+    uint256 public hatchTrigger;
 
     // --- immutables ---
 
@@ -48,10 +49,16 @@ contract VoteDelegate {
     ChiefLike   immutable public chief;
     PollingLike immutable public polling;
 
+    // --- constants ---
+
+    uint256 public constant HATCH_SIZE     = 5;
+    uint256 public constant HATCH_COOLDOWN = 20;
+
     // --- events ---
 
     event Lock(address indexed usr, uint256 wad);
     event Free(address indexed usr, uint256 wad);
+    event ReserveHatch();
 
     // --- constructor ---
 
@@ -76,6 +83,8 @@ contract VoteDelegate {
     // --- gov owner functions
 
     function lock(uint256 wad) external {
+        require(block.number == hatchTrigger || block.number > hatchTrigger + HATCH_SIZE,
+                "VoteDelegate/no-lock-during-hatch");
         gov.transferFrom(msg.sender, address(this), wad);
         chief.lock(wad);
         stake[msg.sender] += wad;
@@ -90,6 +99,13 @@ contract VoteDelegate {
         gov.transfer(msg.sender, wad);
 
         emit Free(msg.sender, wad);
+    }
+
+    function reserveHatch() external {
+        require(block.number > hatchTrigger + HATCH_SIZE + HATCH_COOLDOWN, "VoteDelegate/cooldown-not-finished");
+        hatchTrigger = block.number;
+
+        emit ReserveHatch();
     }
 
     // --- delegate executive voting functions

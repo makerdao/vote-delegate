@@ -45,6 +45,7 @@ contract VoteDelegateTest is DssTest {
 
     event Lock(address indexed usr, uint256 wad);
     event Free(address indexed usr, uint256 wad);
+    event ReserveHatch();
     event Voted(address indexed voter, uint256 indexed pollId, uint256 indexed optionId);
 
     function setUp() public {
@@ -154,6 +155,77 @@ contract VoteDelegateTest is DssTest {
         assertEq(gov.balanceOf(address(delegator2)), delGovBalance);
         assertEq(gov.balanceOf(address(chief)), initialMKR);
         assertEq(proxy.stake(address(delegator2)), 0);
+    }
+
+    function testReserveHatch() public {
+        vm.prank(delegate); gov.approve(address(proxy), type(uint256).max);
+
+        assertEq(gov.balanceOf(address(delegate)), 100 ether);
+        assertEq(proxy.hatchTrigger(), 0);
+
+        vm.prank(delegate); proxy.lock(10 ether);              // can lock
+
+        vm.expectEmit(true, true, true, true);
+        emit ReserveHatch();
+        proxy.reserveHatch();                                  // can reserve hatch
+        assertEq(proxy.hatchTrigger(), block.number);
+        vm.prank(delegate); proxy.lock(10 ether);              // can still lock
+        vm.expectRevert("VoteDelegate/cooldown-not-finished"); // can not reserve hatch again
+        proxy.reserveHatch();
+
+        // move to first block of the hatch
+        vm.roll(block.number + 1);
+        vm.warp(block.timestamp + 1);
+
+        vm.expectRevert("VoteDelegate/no-lock-during-hatch");
+        vm.prank(delegate); proxy.lock(10 ether);              // can not lock
+        vm.expectRevert("VoteDelegate/cooldown-not-finished"); // can not reserve hatch
+        proxy.reserveHatch();
+
+        // move to last block of the hatch
+        vm.roll(block.number + 4);
+        vm.warp(block.timestamp + 4);
+
+        vm.expectRevert("VoteDelegate/no-lock-during-hatch");
+        vm.prank(delegate); proxy.lock(10 ether);              // can not lock
+        vm.expectRevert("VoteDelegate/cooldown-not-finished"); // can not reserve hatch
+        proxy.reserveHatch();
+
+        // move to first block of the cooldown
+        vm.roll(block.number + 1);
+        vm.warp(block.timestamp + 1);
+
+        vm.prank(delegate); proxy.lock(10 ether);              // can lock again
+        vm.expectRevert("VoteDelegate/cooldown-not-finished"); // can not reserve hatch
+        proxy.reserveHatch();
+
+        // move to last block of the cooldown
+        vm.roll(block.number + 4);
+        vm.warp(block.timestamp + 4);
+
+        vm.prank(delegate); proxy.lock(10 ether);              // can still lock
+        vm.expectRevert("VoteDelegate/cooldown-not-finished"); // can not reserve hatch
+        proxy.reserveHatch();
+
+        // move to first block after the cooldown
+        vm.roll(block.number + 1);
+        vm.warp(block.timestamp + 1);
+
+        vm.prank(delegate); proxy.lock(10 ether);              // can lock
+        proxy.reserveHatch();                                  // can reserve hatch again
+        assertEq(proxy.hatchTrigger(), block.number);
+        vm.prank(delegate); proxy.lock(10 ether);              // can still lock
+        vm.expectRevert("VoteDelegate/cooldown-not-finished"); // can not reserve hatch again
+        proxy.reserveHatch();
+
+        // move to first block of the new hatch
+        vm.roll(block.number + 1);
+        vm.warp(block.timestamp + 1);
+
+        vm.expectRevert("VoteDelegate/no-lock-during-hatch");
+        vm.prank(delegate); proxy.lock(10 ether);              // can not lock
+        vm.expectRevert("VoteDelegate/cooldown-not-finished"); // can not reserve hatch
+        proxy.reserveHatch();
     }
 
     function testDelegateVoting() public {
