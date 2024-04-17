@@ -200,8 +200,8 @@ contract VoteDelegateTest is DssTest {
         proxy.reserveHatch();
 
         // move to last block of the cooldown
-        vm.roll(block.number + 4);
-        vm.warp(block.timestamp + 4);
+        vm.roll(block.number + 19);
+        vm.warp(block.timestamp + 19);
 
         vm.prank(delegate); proxy.lock(10 ether);              // can still lock
         vm.expectRevert("VoteDelegate/cooldown-not-finished"); // can not reserve hatch
