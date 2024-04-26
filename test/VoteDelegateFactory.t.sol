@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-pragma solidity ^0.8.16;
+pragma solidity ^0.8.21;
 
 import "dss-test/DssTest.sol";
 
@@ -36,7 +36,7 @@ contract VoteDelegateFactoryTest is DssTest {
         factory = new VoteDelegateFactory(address(chief), address(polling));
     }
 
-    function testConstructor() public {
+    function testConstructor() public view {
         assertEq(address(factory.chief()), address(chief));
         assertEq(address(factory.polling()), address(polling));
     }
