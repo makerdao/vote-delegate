@@ -43,7 +43,7 @@ contract VoteDelegateFactory {
         bytes32 codeHash = keccak256(abi.encodePacked(type(VoteDelegate).creationCode, abi.encode(chief, polling, usr)));
         voteDelegate = address(uint160(uint256(
             keccak256(
-                abi.encodePacked(bytes1(0xff), address(this), keccak256(abi.encode(usr)), codeHash)
+                abi.encodePacked(bytes1(0xff), address(this), bytes32(uint256(uint160(usr))), codeHash)
             )
         )));
     }
@@ -59,7 +59,7 @@ contract VoteDelegateFactory {
     }
 
     function create() external returns (address voteDelegate) {
-        voteDelegate = address(new VoteDelegate{salt: keccak256(abi.encode(msg.sender))}(chief, polling, msg.sender));
+        voteDelegate = address(new VoteDelegate{salt: bytes32(uint256(uint160(msg.sender)))}(chief, polling, msg.sender));
         created[voteDelegate] = 1;
 
         emit CreateVoteDelegate(msg.sender, voteDelegate);
