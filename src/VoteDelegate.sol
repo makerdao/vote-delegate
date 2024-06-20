@@ -102,7 +102,7 @@ contract VoteDelegate {
     }
 
     function reserveHatch() external {
-        require(block.number > hatchTrigger + HATCH_SIZE + HATCH_COOLDOWN, "VoteDelegate/cooldown-not-finished");
+        require(block.number >= hatchTrigger + HATCH_SIZE + HATCH_COOLDOWN, "VoteDelegate/cooldown-not-finished");
         hatchTrigger = block.number;
 
         emit ReserveHatch();
