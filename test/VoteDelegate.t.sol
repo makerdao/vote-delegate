@@ -175,7 +175,6 @@ contract VoteDelegateTest is DssTest {
 
         // move to first block of the hatch
         vm.roll(block.number + 1);
-        vm.warp(block.timestamp + 1);
 
         vm.expectRevert("VoteDelegate/no-lock-during-hatch");
         vm.prank(delegate); proxy.lock(10 ether);              // can not lock
@@ -184,7 +183,6 @@ contract VoteDelegateTest is DssTest {
 
         // move to last block of the hatch
         vm.roll(block.number + 4);
-        vm.warp(block.timestamp + 4);
 
         vm.expectRevert("VoteDelegate/no-lock-during-hatch");
         vm.prank(delegate); proxy.lock(10 ether);              // can not lock
@@ -193,15 +191,13 @@ contract VoteDelegateTest is DssTest {
 
         // move to first block of the cooldown
         vm.roll(block.number + 1);
-        vm.warp(block.timestamp + 1);
 
         vm.prank(delegate); proxy.lock(10 ether);              // can lock again
         vm.expectRevert("VoteDelegate/cooldown-not-finished"); // can not reserve hatch
         proxy.reserveHatch();
 
         // move to last block of the cooldown
-        vm.roll(block.number + 19);
-        vm.warp(block.timestamp + 19);
+        vm.roll(block.number + 18);
 
         vm.prank(delegate); proxy.lock(10 ether);              // can still lock
         vm.expectRevert("VoteDelegate/cooldown-not-finished"); // can not reserve hatch
@@ -209,7 +205,6 @@ contract VoteDelegateTest is DssTest {
 
         // move to first block after the cooldown
         vm.roll(block.number + 1);
-        vm.warp(block.timestamp + 1);
 
         vm.prank(delegate); proxy.lock(10 ether);              // can lock
         proxy.reserveHatch();                                  // can reserve hatch again
@@ -220,7 +215,6 @@ contract VoteDelegateTest is DssTest {
 
         // move to first block of the new hatch
         vm.roll(block.number + 1);
-        vm.warp(block.timestamp + 1);
 
         vm.expectRevert("VoteDelegate/no-lock-during-hatch");
         vm.prank(delegate); proxy.lock(10 ether);              // can not lock
