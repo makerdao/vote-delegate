@@ -21,7 +21,8 @@ import {VoteDelegate} from "src/VoteDelegate.sol";
 contract VoteDelegateFactory {
     // --- storage variables ---
 
-    mapping(address => uint256) public created;
+    mapping(address usr => address voteDelegate)     public delegates;
+    mapping(address voteDelegate => uint256 created) public created;
 
     // --- immutables ---
 
@@ -39,27 +40,15 @@ contract VoteDelegateFactory {
         polling = _polling;
     }
 
-    function getAddress(address usr) public view returns (address voteDelegate) {
-        bytes32 codeHash = keccak256(abi.encodePacked(type(VoteDelegate).creationCode, abi.encode(chief, polling, usr)));
-        voteDelegate = address(uint160(uint256(
-            keccak256(
-                abi.encodePacked(bytes1(0xff), address(this), bytes32(uint256(uint160(usr))), codeHash)
-            )
-        )));
-    }
-
-    function isDelegate(address usr) external view returns (uint256 ok) {
-        ok = created[getAddress(usr)];
-    }
-
-    // Getter that was present in the previous version
-    function delegates(address usr) external view returns (address voteDelegate) {
-        voteDelegate = getAddress(usr);
-        if (created[voteDelegate] == 0) { voteDelegate = address(0); }
+    function isDelegate(address usr) public view returns (bool ok) {
+        ok = delegates[usr] != address(0);
     }
 
     function create() external returns (address voteDelegate) {
-        voteDelegate = address(new VoteDelegate{salt: bytes32(uint256(uint160(msg.sender)))}(chief, polling, msg.sender));
+        require(!isDelegate(msg.sender), "VoteDelegateFactory/sender-is-already-delegate");
+
+        voteDelegate = address(new VoteDelegate(chief, polling, msg.sender));
+        delegates[msg.sender] = voteDelegate;
         created[voteDelegate] = 1;
 
         emit CreateVoteDelegate(msg.sender, voteDelegate);

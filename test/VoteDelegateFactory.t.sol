@@ -42,18 +42,21 @@ contract VoteDelegateFactoryTest is DssTest {
     }
 
     function testCreate() public {
-        address proxy = factory.getAddress(address(1));
+        uint256 snapshot = vm.snapshot();
+        vm.prank(address(1)); address proxy = factory.create();
+        vm.revertTo(snapshot);
+
         assertEq(factory.created(proxy), 0);
-        assertEq(factory.isDelegate(address(1)), 0);
+        assertEq(factory.isDelegate(address(1)), false);
         assertEq(factory.delegates(address(1)), address(0));
         vm.expectEmit(true, true, true, true);
         emit CreateVoteDelegate(address(1), proxy);
         vm.prank(address(1)); address retAddr = factory.create();
         assertEq(retAddr, proxy);
         assertEq(factory.created(proxy), 1);
-        assertEq(factory.isDelegate(address(1)), 1);
+        assertEq(factory.isDelegate(address(1)), true);
         assertEq(factory.delegates(address(1)), proxy);
-        vm.expectRevert();
+        vm.expectRevert("VoteDelegateFactory/sender-is-already-delegate");
         vm.prank(address(1)); factory.create();
     }
 }
