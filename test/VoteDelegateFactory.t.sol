@@ -42,9 +42,7 @@ contract VoteDelegateFactoryTest is DssTest {
     }
 
     function testCreate() public {
-        uint256 snapshot = vm.snapshot();
-        vm.prank(address(1)); address proxy = factory.create();
-        vm.revertTo(snapshot);
+        address proxy = vm.computeCreateAddress(address(factory), vm.getNonce(address(factory)));
 
         assertEq(factory.created(proxy), 0);
         assertEq(factory.isDelegate(address(1)), false);
