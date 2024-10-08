@@ -223,6 +223,10 @@ rule voteYays(address[] yays) {
 rule voteYays_revert(address[] yays) {
     env e;
 
+    require(forall uint256 i. (
+        i >= yays.length || to_mathint(yays[i]) < 2^160
+    ));
+
     address delegate = delegate();
 
     vote@withrevert(e, yays);
