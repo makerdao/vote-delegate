@@ -34,7 +34,7 @@ methods {
 }
 
 // Verify that each storage layout is only modified in the corresponding functions
-rule storageAffected(method f) filtered { f -> !f.isView } {
+rule storageAffected(method f) {
     env e;
 
     address anyAddr;
@@ -223,6 +223,7 @@ rule voteYays(address[] yays) {
 rule voteYays_revert(address[] yays) {
     env e;
 
+    // Temporary workaround until tool fixes this issue:
     require(forall uint256 i. (
         i >= yays.length || to_mathint(yays[i]) < 2^160
     ));
