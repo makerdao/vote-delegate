@@ -9,8 +9,6 @@ methods {
     function polling() external returns (address) envfree;
 }
 
-definition addrZero() returns address = 0x0000000000000000000000000000000000000000;
-
 // Verify correct storage changes for non reverting create
 rule create() {
     env e;
@@ -20,7 +18,7 @@ rule create() {
     address delegatesSenderAfter = delegates(e.msg.sender);
     mathint createdAfter = created(delegatesSenderAfter);
 
-    assert delegatesSenderAfter != addrZero(), "Assert 1";
+    assert delegatesSenderAfter != 0, "Assert 1";
     assert delegatesSenderAfter == voteDelegate, "Assert 2";
     assert createdAfter == 1, "Assert 3";
 }
@@ -34,7 +32,7 @@ rule create_revert() {
     create@withrevert(e);
 
     bool revert1 = e.msg.value > 0;
-    bool revert2 = delegatesSender != addrZero();
+    bool revert2 = delegatesSender != 0;
 
     assert lastReverted <=> revert1 || revert2, "Revert rules failed";
 }
