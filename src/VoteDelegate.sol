@@ -24,7 +24,6 @@ interface GemLike {
 
 interface ChiefLike {
     function GOV() external view returns (GemLike);
-    function IOU() external view returns (GemLike);
     function lock(uint256) external;
     function free(uint256) external;
     function vote(address[] calldata) external returns (bytes32);
@@ -61,9 +60,7 @@ contract VoteDelegate {
         delegate = delegate_;
 
         gov = ChiefLike(chief_).GOV();
-
         gov.approve(chief_, type(uint256).max);
-        ChiefLike(chief_).IOU().approve(chief_, type(uint256).max);
     }
 
     // --- modifiers ---
