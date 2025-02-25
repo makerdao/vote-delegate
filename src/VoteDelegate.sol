@@ -23,7 +23,7 @@ interface GemLike {
 }
 
 interface ChiefLike {
-    function GOV() external view returns (GemLike);
+    function gov() external view returns (GemLike);
     function lock(uint256) external;
     function free(uint256) external;
     function vote(address[] calldata) external returns (bytes32);
@@ -59,7 +59,7 @@ contract VoteDelegate {
         polling = PollingLike(polling_);
         delegate = delegate_;
 
-        gov = ChiefLike(chief_).GOV();
+        gov = ChiefLike(chief_).gov();
         gov.approve(chief_, type(uint256).max);
     }
 

@@ -58,7 +58,7 @@ contract VoteDelegateTest is DssTest {
 
         chief = ChiefExtendedLike(chainlog.getAddress("MCD_ADM"));
         polling = PollingLike(0xD3A9FE267852281a1e6307a1C37CDfD76d39b133);
-        gov = GemLikeExtended(address(chief.GOV()));
+        gov = GemLikeExtended(address(chief.gov()));
 
         deal(address(gov), address(delegate), 100 ether, true);
         deal(address(gov), address(delegator1), 10_000 ether, true);
@@ -71,7 +71,7 @@ contract VoteDelegateTest is DssTest {
         assertEq(address(proxy.chief()), address(chief));
         assertEq(address(proxy.polling()), address(polling));
         assertEq(proxy.delegate(), delegate);
-        assertEq(address(proxy.gov()), address(chief.GOV()));
+        assertEq(address(proxy.gov()), address(chief.gov()));
         assertEq(gov.allowance(address(proxy), address(chief)), type(uint256).max);
     }
 
