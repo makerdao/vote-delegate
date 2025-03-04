@@ -3,8 +3,10 @@ src = "src"
 out = "out"
 libs = ["lib"]
 solc = "0.8.21"
-# Enabling optimizations to improve gas usage.
 optimizer = true
+optimizer_runs = 200
+evmVersion = "shanghai"
+verbosity = 3
 
 [rpc_endpoints]
 mainnet = "${ETH_RPC_URL}"
