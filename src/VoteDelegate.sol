@@ -91,7 +91,7 @@ contract VoteDelegate {
 
     // --- delegate executive voting functions
 
-    function vote(address[] memory yays) external delegate_auth returns (bytes32 result) {
+    function vote(address[] calldata yays) external delegate_auth returns (bytes32 result) {
         result = chief.vote(yays);
     }
 
