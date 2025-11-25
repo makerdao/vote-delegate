@@ -1,29 +1,20 @@
 // VoteDelegate.spec
 
 using GovMock as gov;
-using IouMock as iou;
 using ChiefMock as chief;
 using PollingMock as polling;
 
 methods {
     // storage variables
     function stake(address) external returns (uint256) envfree;
-    function hatchTrigger() external returns (uint256) envfree;
     // immutables
     function delegate() external returns (address) envfree;
     function gov() external returns (address) envfree;
     function chief() external returns (address) envfree;
     function polling() external returns (address) envfree;
-    // constants
-    function HATCH_SIZE() external returns (uint256) envfree;
-    function HATCH_COOLDOWN() external returns (uint256) envfree;
-    //
     function gov.allowance(address,address) external returns (uint256) envfree;
     function gov.balanceOf(address) external returns (uint256) envfree;
     function gov.totalSupply() external returns (uint256) envfree;
-    function iou.allowance(address,address) external returns (uint256) envfree;
-    function iou.totalSupply() external returns (uint256) envfree;
-    function iou.balanceOf(address) external returns (uint256) envfree;
     function chief.lastHashYays() external returns (bytes32) envfree;
     function chief.calculateHash(address[]) external returns (bytes32) envfree;
     function polling.lastPollId() external returns (uint256) envfree;
@@ -33,6 +24,21 @@ methods {
     function polling.calculateHash(uint256[]) external returns (bytes32) envfree;
 }
 
+// Verify no more entry points exist
+rule entryPoints(method f) filtered { f -> !f.isView } {
+    env e;
+
+    calldataarg args;
+    f(e, args);
+
+    assert f.selector == sig:lock(uint256).selector ||
+           f.selector == sig:free(uint256).selector ||
+           f.selector == sig:vote(address[]).selector ||
+           f.selector == sig:vote(bytes32).selector ||
+           f.selector == sig:votePoll(uint256,uint256).selector ||
+           f.selector == sig:votePoll(uint256[],uint256[]).selector;
+}
+
 // Verify that each storage layout is only modified in the corresponding functions
 rule storageAffected(method f) {
     env e;
@@ -40,16 +46,13 @@ rule storageAffected(method f) {
     address anyAddr;
 
     mathint stakeBefore = stake(anyAddr);
-    mathint hatchTriggerBefore = hatchTrigger();
 
     calldataarg args;
     f(e, args);
 
     mathint stakeAfter = stake(anyAddr);
-    mathint hatchTriggerAfter = hatchTrigger();
 
     assert stakeAfter != stakeBefore => f.selector == sig:lock(uint256).selector || f.selector == sig:free(uint256).selector, "Assert 1";
-    assert hatchTriggerAfter != hatchTriggerBefore => f.selector == sig:reserveHatch().selector, "Assert 2";
 }
 
 // Verify correct storage changes for non reverting lock
@@ -63,9 +66,6 @@ rule lock(uint256 wad) {
     mathint govBalanceofVoteDelegateBefore = gov.balanceOf(currentContract);
     mathint govBalanceOfChiefBefore = gov.balanceOf(chief);
     require gov.totalSupply() >= govBalanceofSenderBefore + govBalanceofVoteDelegateBefore + govBalanceOfChiefBefore;
-    mathint iouTotalSupplyBefore = iou.totalSupply();
-    mathint iouBalanceOfVoteDelegateBefore = iou.balanceOf(currentContract);
-    require iouTotalSupplyBefore >= iouBalanceOfVoteDelegateBefore;
 
     lock(e, wad);
 
@@ -73,15 +73,11 @@ rule lock(uint256 wad) {
     mathint govBalanceOfSenderAfter = gov.balanceOf(e.msg.sender);
     mathint govBalanceOfVoteDelegateAfter = gov.balanceOf(currentContract);
     mathint govBalanceOfChiefAfter = gov.balanceOf(chief);
-    mathint iouTotalSupplyAfter = iou.totalSupply();
-    mathint iouBalanceOfVoteDelegateAfter = iou.balanceOf(currentContract);
 
     assert stakeSenderAfter == stakeSenderBefore + wad, "Assert 1";
     assert govBalanceOfSenderAfter == govBalanceofSenderBefore - wad, "Assert 2";
     assert govBalanceOfVoteDelegateAfter == govBalanceofVoteDelegateBefore, "Assert 3";
     assert govBalanceOfChiefAfter == govBalanceOfChiefBefore + wad, "Assert 4";
-    assert iouTotalSupplyAfter == iouTotalSupplyBefore + wad, "Assert 5";
-    assert iouBalanceOfVoteDelegateAfter == iouBalanceOfVoteDelegateBefore + wad, "Assert 6";
 }
 
 // Verify revert rules on lock
@@ -93,29 +89,20 @@ rule lock_revert(uint256 wad) {
     mathint govBalanceofSender = gov.balanceOf(e.msg.sender);
     mathint govBalanceofVoteDelegate = gov.balanceOf(currentContract);
     mathint govBalanceOfChief = gov.balanceOf(chief);
-    mathint iouTotalSupply = iou.totalSupply();
-    mathint iouBalanceOfVoteDelegate = iou.balanceOf(currentContract);
     // Assumptions from tokens regular behavior
     require govTotalSupply >= govBalanceofSender + govBalanceofVoteDelegate + govBalanceOfChief;
-    require iouTotalSupply >= iouBalanceOfVoteDelegate;
     // Assumption from VoteDelegate constructor
     require gov.allowance(currentContract, chief) == max_uint256;
-    // Assumption from Chief functionality
-    require iouTotalSupply == govBalanceOfChief;
     // Assumption from user settings
     require govBalanceofSender >= wad;
     require gov.allowance(e.msg.sender, currentContract) >= wad;
 
-    mathint hatchTrigger = hatchTrigger();
-    mathint hatchSize = HATCH_SIZE();
-
     lock@withrevert(e, wad);
 
     bool revert1 = e.msg.value > 0;
-    bool revert2 = e.block.number != hatchTrigger && e.block.number <= hatchTrigger + hatchSize;
-    bool revert3 = stakeSender + wad > max_uint256;
+    bool revert2 = stakeSender + wad > max_uint256;
 
-    assert lastReverted <=> revert1 || revert2 || revert3, "Revert rules failed";
+    assert lastReverted <=> revert1 || revert2, "Revert rules failed";
 }
 
 // Verify correct storage changes for non reverting free
@@ -129,9 +116,6 @@ rule free(uint256 wad) {
     mathint govBalanceofVoteDelegateBefore = gov.balanceOf(currentContract);
     mathint govBalanceOfChiefBefore = gov.balanceOf(chief);
     require gov.totalSupply() >= govBalanceofSenderBefore + govBalanceofVoteDelegateBefore + govBalanceOfChiefBefore;
-    mathint iouTotalSupplyBefore = iou.totalSupply();
-    mathint iouBalanceOfVoteDelegateBefore = iou.balanceOf(currentContract);
-    require iouTotalSupplyBefore >= iouBalanceOfVoteDelegateBefore;
 
     free(e, wad);
 
@@ -139,15 +123,11 @@ rule free(uint256 wad) {
     mathint govBalanceOfSenderAfter = gov.balanceOf(e.msg.sender);
     mathint govBalanceOfVoteDelegateAfter = gov.balanceOf(currentContract);
     mathint govBalanceOfChiefAfter = gov.balanceOf(chief);
-    mathint iouTotalSupplyAfter = iou.totalSupply();
-    mathint iouBalanceOfVoteDelegateAfter = iou.balanceOf(currentContract);
 
     assert stakeSenderAfter == stakeSenderBefore - wad, "Assert 1";
     assert govBalanceOfSenderAfter == govBalanceofSenderBefore + wad, "Assert 2";
     assert govBalanceOfVoteDelegateAfter == govBalanceofVoteDelegateBefore, "Assert 3";
     assert govBalanceOfChiefAfter == govBalanceOfChiefBefore - wad, "Assert 4";
-    assert iouTotalSupplyAfter == iouTotalSupplyBefore - wad, "Assert 5";
-    assert iouBalanceOfVoteDelegateAfter == iouBalanceOfVoteDelegateBefore - wad, "Assert 6";
 }
 
 // Verify revert rules on free
@@ -159,48 +139,15 @@ rule free_revert(uint256 wad) {
     mathint govBalanceofSender = gov.balanceOf(e.msg.sender);
     mathint govBalanceofVoteDelegate = gov.balanceOf(currentContract);
     mathint govBalanceOfChief = gov.balanceOf(chief);
-    mathint iouTotalSupply = iou.totalSupply();
-    mathint iouBalanceOfVoteDelegate = iou.balanceOf(currentContract);
     // Assumptions from tokens regular behavior
     require govTotalSupply >= govBalanceofSender + govBalanceofVoteDelegate + govBalanceOfChief;
-    require iouTotalSupply >= iouBalanceOfVoteDelegate;
-    // Assumption from VoteDelegate constructor
-    require iou.allowance(currentContract, chief) == max_uint256;
     // Assumption from chief/voteDelegate functionality // TODO: check in invariant
     require govBalanceOfChief >= stakeSender;
-    require iouBalanceOfVoteDelegate == stakeSender;
 
     free@withrevert(e, wad);
 
     bool revert1 = e.msg.value > 0;
     bool revert2 = stakeSender < to_mathint(wad);
-
-    assert lastReverted <=> revert1 || revert2, "Revert rules failed";
-}
-
-// Verify correct storage changes for non reverting reserveHatch
-rule reserveHatch() {
-    env e;
-
-    reserveHatch(e);
-
-    mathint hatchTriggerAfter = hatchTrigger();
-
-    assert hatchTriggerAfter == e.block.number, "Assert 1";
-}
-
-// Verify revert rules on reserveHatch
-rule reserveHatch_revert() {
-    env e;
-
-    mathint hatchTrigger = hatchTrigger();
-    mathint hatchSize = HATCH_SIZE();
-    mathint hatchCooldown = HATCH_COOLDOWN();
-
-    reserveHatch@withrevert(e);
-
-    bool revert1 = e.msg.value > 0;
-    bool revert2 = e.block.number < hatchTrigger + hatchSize + hatchCooldown;
 
     assert lastReverted <=> revert1 || revert2, "Revert rules failed";
 }

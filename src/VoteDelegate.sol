@@ -23,8 +23,7 @@ interface GemLike {
 }
 
 interface ChiefLike {
-    function GOV() external view returns (GemLike);
-    function IOU() external view returns (GemLike);
+    function gov() external view returns (GemLike);
     function lock(uint256) external;
     function free(uint256) external;
     function vote(address[] calldata) external returns (bytes32);
@@ -40,7 +39,6 @@ contract VoteDelegate {
     // --- storage variables ---
 
     mapping(address => uint256) public stake;
-    uint256 public hatchTrigger;
 
     // --- immutables ---
 
@@ -49,16 +47,10 @@ contract VoteDelegate {
     ChiefLike   immutable public chief;
     PollingLike immutable public polling;
 
-    // --- constants ---
-
-    uint256 public constant HATCH_SIZE     = 5;
-    uint256 public constant HATCH_COOLDOWN = 20;
-
     // --- events ---
 
     event Lock(address indexed usr, uint256 wad);
     event Free(address indexed usr, uint256 wad);
-    event ReserveHatch();
 
     // --- constructor ---
 
@@ -67,10 +59,8 @@ contract VoteDelegate {
         polling = PollingLike(polling_);
         delegate = delegate_;
 
-        gov = ChiefLike(chief_).GOV();
-
+        gov = ChiefLike(chief_).gov();
         gov.approve(chief_, type(uint256).max);
-        ChiefLike(chief_).IOU().approve(chief_, type(uint256).max);
     }
 
     // --- modifiers ---
@@ -83,8 +73,6 @@ contract VoteDelegate {
     // --- gov owner functions
 
     function lock(uint256 wad) external {
-        require(block.number == hatchTrigger || block.number > hatchTrigger + HATCH_SIZE,
-                "VoteDelegate/no-lock-during-hatch");
         gov.transferFrom(msg.sender, address(this), wad);
         chief.lock(wad);
         stake[msg.sender] += wad;
@@ -101,16 +89,9 @@ contract VoteDelegate {
         emit Free(msg.sender, wad);
     }
 
-    function reserveHatch() external {
-        require(block.number >= hatchTrigger + HATCH_SIZE + HATCH_COOLDOWN, "VoteDelegate/cooldown-not-finished");
-        hatchTrigger = block.number;
-
-        emit ReserveHatch();
-    }
-
     // --- delegate executive voting functions
 
-    function vote(address[] memory yays) external delegate_auth returns (bytes32 result) {
+    function vote(address[] calldata yays) external delegate_auth returns (bytes32 result) {
         result = chief.vote(yays);
     }
 

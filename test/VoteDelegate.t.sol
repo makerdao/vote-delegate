@@ -30,6 +30,10 @@ interface GemLikeExtended is GemLike {
     function mint(address, uint256) external;
 }
 
+interface ChainlogLike {
+    function getAddress(bytes32) external view returns (address);
+}
+
 contract VoteDelegateTest is DssTest {
     address constant c1 = address(0x1);
     address constant c2 = address(0x2);
@@ -43,17 +47,18 @@ contract VoteDelegateTest is DssTest {
     address delegator1 = address(222);
     address delegator2 = address(333);
 
+    ChainlogLike constant chainlog = ChainlogLike(0xdA0Ab1e0017DEbCd72Be8599041a2aa3bA7e740F);
+
     event Lock(address indexed usr, uint256 wad);
     event Free(address indexed usr, uint256 wad);
-    event ReserveHatch();
     event Voted(address indexed voter, uint256 indexed pollId, uint256 indexed optionId);
 
     function setUp() public {
         vm.createSelectFork(vm.envString("ETH_RPC_URL"));
 
-        chief = ChiefExtendedLike(0x0a3f6849f78076aefaDf113F5BED87720274dDC0);
+        chief = ChiefExtendedLike(chainlog.getAddress("MCD_ADM"));
         polling = PollingLike(0xD3A9FE267852281a1e6307a1C37CDfD76d39b133);
-        gov = GemLikeExtended(address(chief.GOV()));
+        gov = GemLikeExtended(address(chief.gov()));
 
         deal(address(gov), address(delegate), 100 ether, true);
         deal(address(gov), address(delegator1), 10_000 ether, true);
@@ -66,9 +71,8 @@ contract VoteDelegateTest is DssTest {
         assertEq(address(proxy.chief()), address(chief));
         assertEq(address(proxy.polling()), address(polling));
         assertEq(proxy.delegate(), delegate);
-        assertEq(address(proxy.gov()), address(chief.GOV()));
+        assertEq(address(proxy.gov()), address(chief.gov()));
         assertEq(gov.allowance(address(proxy), address(chief)), type(uint256).max);
-        assertEq(GemLikeExtended(address(chief.IOU())).allowance(address(proxy), address(chief)), type(uint256).max);
     }
 
     function testModifiers() public {
@@ -84,7 +88,7 @@ contract VoteDelegateTest is DssTest {
     }
 
     function testProxyLockFree() public {
-        uint256 initialMKR = gov.balanceOf(address(chief));
+        uint256 initialGov = gov.balanceOf(address(chief));
 
         vm.prank(delegate); gov.approve(address(proxy), type(uint256).max);
 
@@ -94,7 +98,7 @@ contract VoteDelegateTest is DssTest {
         emit Lock(delegate, 100 ether);
         vm.prank(delegate); proxy.lock(100 ether);
         assertEq(gov.balanceOf(address(delegate)), 0);
-        assertEq(gov.balanceOf(address(chief)), initialMKR + 100 ether);
+        assertEq(gov.balanceOf(address(chief)), initialGov + 100 ether);
         assertEq(proxy.stake(address(delegate)), 100 ether);
 
         // Comply with Chief's flash loan protection
@@ -104,12 +108,12 @@ contract VoteDelegateTest is DssTest {
         emit Free(delegate, 100 ether);
         vm.prank(delegate); proxy.free(100 ether);
         assertEq(gov.balanceOf(address(delegate)), 100 ether);
-        assertEq(gov.balanceOf(address(chief)), initialMKR);
+        assertEq(gov.balanceOf(address(chief)), initialGov);
         assertEq(proxy.stake(address(delegate)), 0);
     }
 
     function testDelegatorLockFree() public {
-        uint256 initialMKR = gov.balanceOf(address(chief));
+        uint256 initialGov = gov.balanceOf(address(chief));
 
         vm.prank(delegator1); gov.approve(address(proxy), type(uint256).max);
 
@@ -117,7 +121,7 @@ contract VoteDelegateTest is DssTest {
         emit Lock(delegator1, 10_000 ether);
         vm.prank(delegator1); proxy.lock(10_000 ether);
         assertEq(gov.balanceOf(address(delegator1)), 0);
-        assertEq(gov.balanceOf(address(chief)), initialMKR + 10_000 ether);
+        assertEq(gov.balanceOf(address(chief)), initialGov + 10_000 ether);
         assertEq(proxy.stake(address(delegator1)), 10_000 ether);
 
         // Comply with Chief's flash loan protection
@@ -127,13 +131,13 @@ contract VoteDelegateTest is DssTest {
         emit Free(delegator1, 10_000 ether);
         vm.prank(delegator1); proxy.free(10_000 ether);
         assertEq(gov.balanceOf(address(delegator1)), 10_000 ether);
-        assertEq(gov.balanceOf(address(chief)), initialMKR);
+        assertEq(gov.balanceOf(address(chief)), initialGov);
         assertEq(proxy.stake(address(delegator1)), 0);
     }
 
     function testDelegatorLockFreeFuzz(uint256 wad_seed) public {
         uint256 wad = wad_seed < 1 ether ?  wad_seed += 1 ether : wad_seed % 20_000 ether;
-        uint256 initialMKR = gov.balanceOf(address(chief));
+        uint256 initialGov = gov.balanceOf(address(chief));
 
         vm.prank(delegator2); gov.approve(address(proxy), type(uint256).max);
 
@@ -143,7 +147,7 @@ contract VoteDelegateTest is DssTest {
         emit Lock(delegator2, wad);
         vm.prank(delegator2); proxy.lock(wad);
         assertEq(gov.balanceOf(address(delegator2)), delGovBalance - wad);
-        assertEq(gov.balanceOf(address(chief)), initialMKR + wad);
+        assertEq(gov.balanceOf(address(chief)), initialGov + wad);
         assertEq(proxy.stake(address(delegator2)), wad);
 
         // Comply with Chief's flash loan protection
@@ -153,77 +157,12 @@ contract VoteDelegateTest is DssTest {
         emit Free(delegator2, wad);
         vm.prank(delegator2); proxy.free(wad);
         assertEq(gov.balanceOf(address(delegator2)), delGovBalance);
-        assertEq(gov.balanceOf(address(chief)), initialMKR);
+        assertEq(gov.balanceOf(address(chief)), initialGov);
         assertEq(proxy.stake(address(delegator2)), 0);
     }
 
-    function testReserveHatch() public {
-        vm.prank(delegate); gov.approve(address(proxy), type(uint256).max);
-
-        assertEq(gov.balanceOf(address(delegate)), 100 ether);
-        assertEq(proxy.hatchTrigger(), 0);
-
-        vm.prank(delegate); proxy.lock(10 ether);              // can lock
-
-        vm.expectEmit(true, true, true, true);
-        emit ReserveHatch();
-        proxy.reserveHatch();                                  // can reserve hatch
-        assertEq(proxy.hatchTrigger(), block.number);
-        vm.prank(delegate); proxy.lock(10 ether);              // can still lock
-        vm.expectRevert("VoteDelegate/cooldown-not-finished"); // can not reserve hatch again
-        proxy.reserveHatch();
-
-        // move to first block of the hatch
-        vm.roll(block.number + 1);
-
-        vm.expectRevert("VoteDelegate/no-lock-during-hatch");
-        vm.prank(delegate); proxy.lock(10 ether);              // can not lock
-        vm.expectRevert("VoteDelegate/cooldown-not-finished"); // can not reserve hatch
-        proxy.reserveHatch();
-
-        // move to last block of the hatch
-        vm.roll(block.number + 4);
-
-        vm.expectRevert("VoteDelegate/no-lock-during-hatch");
-        vm.prank(delegate); proxy.lock(10 ether);              // can not lock
-        vm.expectRevert("VoteDelegate/cooldown-not-finished"); // can not reserve hatch
-        proxy.reserveHatch();
-
-        // move to first block of the cooldown
-        vm.roll(block.number + 1);
-
-        vm.prank(delegate); proxy.lock(10 ether);              // can lock again
-        vm.expectRevert("VoteDelegate/cooldown-not-finished"); // can not reserve hatch
-        proxy.reserveHatch();
-
-        // move to last block of the cooldown
-        vm.roll(block.number + 18);
-
-        vm.prank(delegate); proxy.lock(10 ether);              // can still lock
-        vm.expectRevert("VoteDelegate/cooldown-not-finished"); // can not reserve hatch
-        proxy.reserveHatch();
-
-        // move to first block after the cooldown
-        vm.roll(block.number + 1);
-
-        vm.prank(delegate); proxy.lock(10 ether);              // can lock
-        proxy.reserveHatch();                                  // can reserve hatch again
-        assertEq(proxy.hatchTrigger(), block.number);
-        vm.prank(delegate); proxy.lock(10 ether);              // can still lock
-        vm.expectRevert("VoteDelegate/cooldown-not-finished"); // can not reserve hatch again
-        proxy.reserveHatch();
-
-        // move to first block of the new hatch
-        vm.roll(block.number + 1);
-
-        vm.expectRevert("VoteDelegate/no-lock-during-hatch");
-        vm.prank(delegate); proxy.lock(10 ether);              // can not lock
-        vm.expectRevert("VoteDelegate/cooldown-not-finished"); // can not reserve hatch
-        proxy.reserveHatch();
-    }
-
     function testDelegateVoting() public {
-        uint256 initialMKR = gov.balanceOf(address(chief));
+        uint256 initialGov = gov.balanceOf(address(chief));
 
         vm.prank(delegate); gov.approve(address(proxy), type(uint256).max);
         vm.prank(delegator1); gov.approve(address(proxy), type(uint256).max);
@@ -231,7 +170,7 @@ contract VoteDelegateTest is DssTest {
         vm.prank(delegate); proxy.lock(100 ether);
         vm.prank(delegator1); proxy.lock(10_000 ether);
 
-        assertEq(gov.balanceOf(address(chief)), initialMKR + 10_100 ether);
+        assertEq(gov.balanceOf(address(chief)), initialGov + 10_100 ether);
 
         address[] memory yays = new address[](1);
         yays[0] = c1;
@@ -268,7 +207,7 @@ contract VoteDelegateTest is DssTest {
     function testDelegateVotingFuzz(uint256 wad_seed, uint256 wad2_seed) public {
         uint256 wad = wad_seed < 1 ether ?  wad_seed += 1 ether : wad_seed % 100 ether;
         uint256 wad2 = wad2_seed < 1 ether ?  wad2_seed += 1 ether : wad2_seed % 20_000 ether;
-        uint256 initialMKR = gov.balanceOf(address(chief));
+        uint256 initialGov = gov.balanceOf(address(chief));
 
         vm.prank(delegate); gov.approve(address(proxy), type(uint256).max);
         vm.prank(delegator2); gov.approve(address(proxy), type(uint256).max);
@@ -283,7 +222,7 @@ contract VoteDelegateTest is DssTest {
         assertEq(gov.balanceOf(address(delegator2)), del2GovBalance - wad2);
         assertEq(proxy.stake(address(delegate)), wad);
         assertEq(proxy.stake(address(delegator2)), wad2);
-        assertEq(gov.balanceOf(address(chief)), initialMKR + wad + wad2);
+        assertEq(gov.balanceOf(address(chief)), initialGov + wad + wad2);
 
         address[] memory yays = new address[](1);
         yays[0] = c1;
@@ -304,7 +243,7 @@ contract VoteDelegateTest is DssTest {
         vm.prank(delegate); proxy.lock(100 ether);
         vm.prank(delegator1); proxy.lock(10_000 ether);
 
-        // Attempting to take more MKR than assigned in the stake mapping (having a greater total)
+        // Attempting to take more gov tokens than assigned in the stake mapping (having a greater total)
         vm.expectRevert("VoteDelegate/insufficient-stake");
         vm.prank(delegate); proxy.free(100 ether + 1);
     }

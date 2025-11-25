@@ -20,17 +20,23 @@ import "dss-test/DssTest.sol";
 
 import "src/VoteDelegateFactory.sol";
 
+interface ChainlogLike {
+    function getAddress(bytes32) external view returns (address);
+}
+
 contract VoteDelegateFactoryTest is DssTest {
     VoteDelegateFactory factory;
     address chief;
     address polling;
+
+    ChainlogLike constant chainlog = ChainlogLike(0xdA0Ab1e0017DEbCd72Be8599041a2aa3bA7e740F);
 
     event CreateVoteDelegate(address indexed usr, address indexed voteDelegate);
 
     function setUp() public {
         vm.createSelectFork(vm.envString("ETH_RPC_URL"));
 
-        chief = 0x0a3f6849f78076aefaDf113F5BED87720274dDC0;
+        chief = chainlog.getAddress("MCD_ADM");
         polling = 0xD3A9FE267852281a1e6307a1C37CDfD76d39b133;
 
         factory = new VoteDelegateFactory(address(chief), address(polling));
